@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CarCare – كاركير</title>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0b1a6b"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="كاركير"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
 :root{--bg:#faeded;--card:#fff;--tx:#14163a;--mut:#667;--ln:#e3d6d6;--nv:#0b1a6b;box-sizing:border-box}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#13151f;--card:#1e2231;--tx:#eef0ff;--mut:#9aa;--ln:#333a52}}
@@ -39,10 +40,10 @@ button.b.x{background:#d33}button.b.sm{font-size:.75em;padding:7px 12px}
 </style></head><body>
 <header><div class="en" data-a="home"><span class="y">Car</span><span class="w">Care</span></div><img id="lg" data-a="home" alt="CarCare"></header>
 <main><div id="tb"></div><div id="msg"></div><div id="app"></div><div id="bb"></div></main>
-<footer>copywrite ehab.youssef.eg 01004445644</footer>
+<footer>copywrite ehab.youssef.eg 01004445644<br><button id="inst" class="lk" hidden style="color:#ffd21f">📲 تثبيت التطبيق</button></footer>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import{getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import{getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,sendPasswordResetEmail,updatePassword,reauthenticateWithCredential,EmailAuthProvider}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import{getFirestore,doc,setDoc,addDoc,deleteDoc,updateDoc,collection,onSnapshot,query,orderBy,serverTimestamp,Timestamp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 // ====== ضع إعدادات مشروعك هنا (Firebase Console > Project settings > Your apps) ======
 const firebaseConfig={apiKey:"AIzaSyB7fltLuOCJftVeISCHUc1tYblV8N6gyoY",authDomain:"carcare-7eff5.firebaseapp.com",projectId:"carcare-7eff5",storageBucket:"carcare-7eff5.firebasestorage.app",messagingSenderId:"209472389799",appId:"1:209472389799:web:8f967e2c6b3609361f9182"};
@@ -55,7 +56,7 @@ function $(s){return document.querySelector(s)}$('#lg').src=LOGO;
 const PHONE='01004445644',DAY=864e5;
 const esc=v=>String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const D={users:[],cars:[],recs:{},drv:{}};
-const msg=t=>{$('#msg').textContent=t||''};
+const msg=t=>{const m=$('#msg');m.textContent=t||'';m.style.color=''};const ok=t=>{msg(t);$('#msg').style.color='#0a7a2f'};
 const H=async s=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(b=>b.toString(16).padStart(2,'0')).join('');
 const T=()=>new Date().toISOString().slice(0,10);
 const BR=['تويوتا','هيونداي','كيا','نيسان','شيفروليه','فورد','هوندا','مازدا','ميتسوبيشي','سوزوكي','سكودا','فولكس فاجن','أودي','بي إم دبليو','مرسيدس','بيجو','رينو','سيتروين','أوبل','فيات','شيري','جيلي','بي واي دي','إم جي','جيب','لاند روفر','لكزس','فولفو','سوبارو','دايو','براليانس','أخرى'];
@@ -67,7 +68,7 @@ const S=[
 {id:'cost',t:'مصروفات',f:[]},
 {id:'license',t:'تراخيص',f:[['kind','النوع','sel',['رخصة السيارة','رخصة القيادة']],['start','بداية الترخيص','date'],['end','نهاية الترخيص','date'],['photo','صورة الرخصة','file']]},
 {id:'route',t:'خط سير',f:[['car','السيارة','car'],['out','كيلو الخروج','number'],['inn','كيلو الدخول','number'],['drv','السائق','drv'],['desc','وصف المشوار','text'],['by','المسئول بالتكليف','text']]}];
-let me=null,car=null,sec=null,adm=false,view='login',pp=null,per='month',payv=false,editId=null;
+let me=null,car=null,sec=null,adm=false,view='login',pp=null,per='month',payv=false,editId=null,cpw=false;
 const rec=(c,s)=>((D.recs[c]||{})[s])||[];
 const mine=()=>D.cars.filter(c=>c.uid===me.id);
 const lim=()=>me.type==='co'?10:3;
@@ -89,19 +90,22 @@ function TB(){const t=$('#tb');if(!me){t.innerHTML='';return}
  const d=Math.ceil((me.until-Date.now())/DAY);let n='';
  if(st(me)==='x')n='انتهت مدة حسابك. يمكنك التصفح فقط حتى يتم تنشيط حساب مدفوع';
  else if(me.plan!=='trial'&&d<=3)n='باقي '+(d<=1?'يوم واحد':d===2?'يومان':d+' أيام')+' على التفعيل';
- t.innerHTML=`<div class="tbr no"><button class="pd" data-a="pay">حساب مدفوع</button><button class="lk" data-a="out">تسجيل خروج</button></div>${n?`<div class="al">${n}</div>`:''}`}
+ t.innerHTML=`<div class="tbr no"><button class="pd" data-a="pay">حساب مدفوع</button><span><button class="lk" data-a="cpw">تغيير كلمة السر</button><button class="lk" data-a="out">تسجيل خروج</button></span></div>${n?`<div class="al">${n}</div>`:''}`}
 function BB(){const b=$('#bb');if(!me){b.innerHTML='';return}
- b.innerHTML=`<div class="bbr no">${!car&&!payv?'<span></span>':'<div><button class="b" data-a="back" title="رجوع خطوة" style="font-size:1.3em;line-height:1">↩︎</button> <button class="b sm" data-a="home">القائمة الرئيسية</button></div>'}${payv?'':'<button class="b" data-a="print">طباعة PDF</button>'}</div>`}
+ b.innerHTML=`<div class="bbr no">${!car&&!payv&&!cpw?'<span></span>':'<div><button class="b" data-a="back" title="رجوع خطوة" style="font-size:1.3em;line-height:1">↩︎</button> <button class="b sm" data-a="home">القائمة الرئيسية</button></div>'}${payv||cpw?'':'<button class="b" data-a="print">طباعة PDF</button>'}</div>`}
 function R(){msg();const a=$('#app');
  if(location.hash==='#admin'){adm=!(auth&&auth.currentUser)?'login':(auth.currentUser.uid===ADMIN_UID?'in':'no');$('#tb').innerHTML='';$('#bb').innerHTML='';return A(a)}
  adm=false;
- if(!me){$('#tb').innerHTML='';$('#bb').innerHTML='';return(auth&&auth.currentUser)?(a.innerHTML='<p>جاري التحميل...<br><button class="lk" data-a="out">خروج</button></p>'):(view==='signup'?SU(a):LI(a))}
+ if(!me){$('#tb').innerHTML='';$('#bb').innerHTML='';return(auth&&auth.currentUser)?(a.innerHTML='<p>جاري التحميل...<br><button class="lk" data-a="out">خروج</button></p>'):(view==='signup'?SU(a):view==='forgot'?FG(a):LI(a))}
  TB();BB();
+ if(cpw)return CP(a);
  if(payv)return PW(a);
  if(!car)return CARS(a);
  if(!sec)return CAR(a);
  return SEC(a)}
-function LI(a){a.innerHTML=`<form class="one" data-f="login"><h2>تسجيل الدخول</h2><label>الإيميل<input name="e" type="email" required></label><label>كلمة السر<input name="p" type="password" required></label><button class="b">دخول</button><button type="button" class="lk" data-a="view:signup">تسجيل حساب جديد</button></form>`}
+function FG(a){a.innerHTML=`<form class="one" data-f="forgot"><h2>استرجاع كلمة السر</h2><p>اكتب إيميلك وسنرسل لك رابطًا لتعيين كلمة سر جديدة</p><label>الإيميل<input name="e" type="email" required></label><button class="b">إرسال الرابط</button><button type="button" class="lk" data-a="view:login">رجوع لتسجيل الدخول</button></form>`}
+function CP(a){a.innerHTML=`<form class="one" data-f="chpw"><h2>تغيير كلمة السر</h2><label>كلمة السر الحالية<input name="o" type="password" required></label><label>كلمة السر الجديدة<input name="n" type="password" minlength="6" required></label><label>تأكيد كلمة السر الجديدة<input name="n2" type="password" minlength="6" required></label><button class="b">تغيير</button><small>نسيت الحالية؟ سجّل خروج واضغط "نسيت كلمة السر؟"</small></form>`}
+function LI(a){a.innerHTML=`<form class="one" data-f="login"><h2>تسجيل الدخول</h2><label>الإيميل<input name="e" type="email" required></label><label>كلمة السر<input name="p" type="password" required></label><button class="b">دخول</button><button type="button" class="lk" data-a="view:signup">تسجيل حساب جديد</button><button type="button" class="lk" data-a="view:forgot">نسيت كلمة السر؟</button></form>`}
 function SU(a){a.innerHTML=`<form class="one" data-f="su"><h2>حساب جديد (٧ أيام مجانًا)</h2><label>الاسم الأول<input name="fn" required></label><label>اللقب<input name="ln" required></label><label>الإيميل<input name="e" type="email" required></label><label>كلمة السر<input name="p" type="password" minlength="6" required></label><label>رقم الموبايل<input name="m" type="tel" required></label><label>نوع الحساب<select name="t"><option value="ind">عميل فردي (٣ سيارات)</option><option value="co">شركة (١٠ سيارات)</option></select></label><button class="b">تسجيل</button><button type="button" class="lk" data-a="view:login">عندي حساب</button></form>`}
 function PW(a){const pr=me.type==='co'?[50,500]:[30,300],amt=pp==='y'?pr[1]:pr[0];
  const wa='https://wa.me/2'+PHONE+'?text='+encodeURIComponent('تم تحويل '+amt+' ج لتفعيل حساب CarCare - '+me.email);
@@ -153,10 +157,10 @@ function COST(a,c){const n=new Date(),y=T(),M=y.slice(0,7),Y=y.slice(0,4);
 function A(a){if(adm==='no')return a.innerHTML='<div class="card">هذا الحساب غير مصرح له بلوحة الأدمن. <button class="lk" data-a="out">خروج</button></div>';if(adm==='login')return a.innerHTML=`<form class="one" data-f="adm"><h2>دخول الأدمن</h2><label>الإيميل<input name="e" type="email" required></label><label>كلمة السر<input name="p" type="password" required></label><button class="b">دخول</button></form>`;
  a.innerHTML=`<h2>إدارة الحسابات</h2><button class="lk" data-a="out">خروج</button><div class="card" style="overflow-x:auto"><table><tr><th>الاسم</th><th>الإيميل / الموبايل</th><th>النوع</th><th>الحالة</th><th>تحكم</th></tr>${D.users.map(u=>`<tr><td>${esc(u.fn+' '+u.ln)}</td><td>${esc(u.email)}<br>${esc(u.mob)}</td><td>${u.type==='co'?'شركة':'فردي'}</td><td>${stl(u)}</td><td><button class="b" data-a="adm:${u.id}:monthly">شهري</button> <button class="b" data-a="adm:${u.id}:yearly">سنوي</button> <button class="b x" data-a="adm:${u.id}:cancelled">إلغاء</button></td></tr>`).join('')||'<tr><td colspan="5">لا توجد حسابات</td></tr>'}</table></div>`}
 const ACT={view(v){view=v;R()},out(){signOut(auth)},
- pay(){payv=true;pp=null;R()},pp(v){pp=v;R()},car(v){car=v;sec=null;editId=null;R()},
+ pay(){payv=true;cpw=false;pp=null;R()},cpw(){cpw=true;payv=false;R()},pp(v){pp=v;R()},car(v){car=v;sec=null;editId=null;R()},
  sec(v){sec=v;editId=null;R()},its(){msg('صفحة النقل الذكي قيد الإنشاء وستتوفر قريبًا')},
- back(){editId=null;if(payv)payv=false;else if(sec)sec=null;else car=null;R()},
- home(){editId=null;payv=false;car=sec=null;if(!me)view='login';if(location.hash==='#admin')location.hash='';R()},
+ back(){editId=null;if(cpw)cpw=false;else if(payv)payv=false;else if(sec)sec=null;else car=null;R()},
+ home(){editId=null;payv=false;cpw=false;car=sec=null;if(!me)view='login';if(location.hash==='#admin')location.hash='';R()},
  print(){window.print()},edit(v){if(!confirm('تأكيد التعديل'))return;editId=v;R()},cancel(){editId=null;R()},
  rsearch(){RA={by:RF.by,val:RF.val,per:RF.per,from:RF.from,to:RF.to};R()},
  rs(k){RF.dir=RF.sort===k?-RF.dir:1;RF.sort=k;R()},
@@ -177,6 +181,8 @@ async add(f){if(RO())return msg(NA);const r={};for(const[k,v]of f.entries()){if(
  if(editId){const id=editId;editId=null;try{await updateDoc(doc(db,'users',me.id,'recs',id),r)}catch(e){msg(fb(e))}return R()}
  let tc=car;if(sec==='route'){tc=r.car||car;delete r.car}if(sec==='parts')r.total=(+r.price||0)+(+r.labor||0);
  try{await addDoc(collection(db,'users',me.id,'recs'),{...r,car:tc,sec,ts:Date.now()})}catch(e){msg(fb(e))}}};
+FS.forgot=async f=>{try{await sendPasswordResetEmail(auth,f.get('e').trim());ok('إذا كان الإيميل مسجلًا لدينا فقد أرسلنا رابط الاسترجاع. راجع صندوق الوارد ورسائل Spam')}catch(e){msg(fb(e))}};
+FS.chpw=async f=>{const n=f.get('n');if(n!==f.get('n2'))return msg('كلمتا السر الجديدتان غير متطابقتين');try{const u=auth.currentUser;await reauthenticateWithCredential(u,EmailAuthProvider.credential(u.email,f.get('o')));await updatePassword(u,n);ok('تم تغيير كلمة السر بنجاح')}catch(e){msg(e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'?'كلمة السر الحالية غير صحيحة':fb(e))}};
 FS.adm=FS.login;
 document.addEventListener('submit',e=>{e.preventDefault();const f=FS[e.target.dataset.f];f&&f(new FormData(e.target))});
 document.addEventListener('change',async e=>{const t=e.target;
@@ -189,7 +195,7 @@ const uf=(id,d)=>({id,...d,created:ms(d.created),until:ms(d.until)});
 let unsub=[];
 if(!cfgOk){$('#app').innerHTML='<div class="card">افتح ملف index.html وضع إعدادات Firebase في firebaseConfig (راجع ملف README).</div>'}
 else onAuthStateChanged(auth,u=>{
- unsub.forEach(f=>f());unsub=[];D.cars=[];D.recs={};D.drv={};D.users=[];me=car=sec=null;payv=false;editId=null;R();
+ unsub.forEach(f=>f());unsub=[];D.cars=[];D.recs={};D.drv={};D.users=[];me=car=sec=null;payv=false;cpw=false;editId=null;R();
  if(!u)return;
  const er=e=>msg(fb(e));
  unsub.push(onSnapshot(doc(db,'users',u.uid),s=>{me=s.exists()?uf(u.uid,s.data()):null;R()},er));
@@ -198,4 +204,8 @@ else onAuthStateChanged(auth,u=>{
  unsub.push(onSnapshot(collection(db,'users',u.uid,'drivers'),s=>{D.drv[u.uid]=s.docs.map(d=>d.data().n);R()},er));
  unsub.push(onSnapshot(query(collection(db,'users',u.uid,'recs'),orderBy('ts','desc')),s=>{D.recs={};s.docs.forEach(d=>{const x=d.data();((D.recs[x.car]=D.recs[x.car]||{})[x.sec]=(D.recs[x.car][x.sec]||[])).push({id:d.id,...x})});R()},er));
 });
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+let dp;addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;$('#inst').hidden=false});
+$('#inst').onclick=async()=>{if(!dp)return;dp.prompt();await dp.userChoice;dp=null;$('#inst').hidden=true};
+addEventListener('appinstalled',()=>{$('#inst').hidden=true});
 </script></body></html>
