@@ -35,6 +35,7 @@ button.b,a.b{padding:10px 16px;border:0;border-radius:10px;background:linear-gra
 .al{background:#d11;color:#fff;text-align:center;padding:10px;border-radius:10px;margin-top:8px;font-weight:700}
 .lgb{width:46px;height:46px;object-fit:contain;background:#fff;border-radius:50%;padding:3px;border:1px solid var(--ln)}
 .em{font-size:2.4rem}.ic.sl{outline:3px solid #3fbcf5}th.s{cursor:pointer;text-decoration:underline}
+button.b.x{background:#d33}button.b.sm{font-size:.75em;padding:7px 12px}
 </style></head><body>
 <header><div class="en" data-a="home"><span class="y">Car</span><span class="w">Care</span></div><img id="lg" data-a="home" alt="CarCare"></header>
 <main><div id="tb"></div><div id="msg"></div><div id="app"></div><div id="bb"></div></main>
@@ -78,7 +79,7 @@ function oilWarn(c){const o=rec(c,'oil')[0];return o&&+o.next&&curKm(c)>=+o.next
 function licWarn(c){return rec(c,'license').some(r=>r.end&&dleft(r.end)<=30)}
 const badge=(c,s)=>(s==='oil'&&oilWarn(c))||(s==='license'&&licWarn(c));
 const RO=()=>!!me&&st(me)==='x';
-let RF={car:'all',from:'',to:'',sort:'d',dir:-1};
+let RF={by:'car',val:'',per:'all',from:'',to:'',sort:'d',dir:-1},RA={by:'car',val:'',per:'all',from:'',to:''};
 const shrink=(f,m,t='image/jpeg')=>new Promise(res=>{const fr=new FileReader();fr.onload=()=>{const i=new Image();i.onload=()=>{const q=Math.min(1,m/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.round(i.width*q);c.height=Math.round(i.height*q);c.getContext('2d').drawImage(i,0,0,c.width,c.height);res(c.toDataURL(t,.6))};i.src=fr.result};fr.readAsDataURL(f)});
 const SLUG={'تويوتا':'toyota','هيونداي':'hyundai','كيا':'kia','نيسان':'nissan','شيفروليه':'chevrolet','فورد':'ford','هوندا':'honda','مازدا':'mazda','ميتسوبيشي':'mitsubishi','سوزوكي':'suzuki','سكودا':'skoda','فولكس فاجن':'volkswagen','أودي':'audi','بي إم دبليو':'bmw','مرسيدس':'mercedes-benz','بيجو':'peugeot','رينو':'renault','سيتروين':'citroen','أوبل':'opel','فيات':'fiat','شيري':'chery','جيلي':'geely','بي واي دي':'byd','إم جي':'mg','جيب':'jeep','لاند روفر':'land-rover','لكزس':'lexus','فولفو':'volvo','سوبارو':'subaru'};
 const LGU='https://raw.githubusercontent.com/filippofilip95/car-logos-dataset/master/logos/thumb/';
@@ -90,7 +91,7 @@ function TB(){const t=$('#tb');if(!me){t.innerHTML='';return}
  else if(me.plan!=='trial'&&d<=3)n='باقي '+(d<=1?'يوم واحد':d===2?'يومان':d+' أيام')+' على التفعيل';
  t.innerHTML=`<div class="tbr no"><button class="pd" data-a="pay">حساب مدفوع</button><button class="lk" data-a="out">تسجيل خروج</button></div>${n?`<div class="al">${n}</div>`:''}`}
 function BB(){const b=$('#bb');if(!me){b.innerHTML='';return}
- b.innerHTML=`<div class="bbr no">${!car&&!payv?'<span></span>':'<div><button class="b" data-a="back">رجوع خطوة</button> <button class="b" data-a="home">القائمة الرئيسية</button></div>'}${payv?'':'<button class="b" data-a="print">طباعة PDF</button>'}</div>`}
+ b.innerHTML=`<div class="bbr no">${!car&&!payv?'<span></span>':'<div><button class="b" data-a="back" title="رجوع خطوة" style="font-size:1.3em;line-height:1">↩︎</button> <button class="b sm" data-a="home">القائمة الرئيسية</button></div>'}${payv?'':'<button class="b" data-a="print">طباعة PDF</button>'}</div>`}
 function R(){msg();const a=$('#app');
  if(location.hash==='#admin'){adm=!(auth&&auth.currentUser)?'login':(auth.currentUser.uid===ADMIN_UID?'in':'no');$('#tb').innerHTML='';$('#bb').innerHTML='';return A(a)}
  adm=false;
@@ -108,10 +109,10 @@ function PW(a){const pr=me.type==='co'?[50,500]:[30,300],amt=pp==='y'?pr[1]:pr[0
 function CARS(a){const cs=mine(),ro=RO(),left=me.plan==='trial'?Math.max(0,Math.ceil((me.created+7*DAY-Date.now())/DAY)):0;
  a.innerHTML=`<div style="text-align:center;margin:4vh 0 10px"><h2>مرحبًا ${esc(me.fn)} ${esc(me.ln)} 👋</h2>${left&&!ro?`<div class="card">الفترة المجانية: باقي ${left} يوم</div>`:''}<div class="grid" style="max-width:190px;margin:14px auto 0"><div class="ic"><img src="${LOGO}" alt="">عربيتي (${cs.length}/${lim()})</div></div></div>
  ${ro?'':cs.length<lim()?`<form data-f="car"><label>نوع السيارة<select name="b" id="bs">${BR.map(b=>`<option>${b}</option>`).join('')}</select></label><label id="ob" hidden>اكتب النوع<input name="o"></label><label>الموديل<input name="m" required></label><label>اللون<input name="c" required></label><button class="b">إضافة سيارة</button></form>`:'<div class="card">وصلت للحد الأقصى من السيارات.</div>'}
- ${cs.map(c=>{const f=rec(c.id,'fuel')[0],s=rec(c.id,'service')[0],p=rec(c.id,'parts')[0];return `<div class="card row" style="cursor:pointer" data-a="car:${c.id}"><div class="row" style="margin:0">${lg(c)}<div><b style="color:var(--tx)">${esc(c.b)} ${esc(c.m)}</b> · ${esc(c.c)}<br><small>${f?'آخر تفويل: '+f.amt+' ج ('+f.date+') · ':''}${s?'آخر صيانة: '+esc(s.desc||s.shop||'')+' ('+s.date+') · ':''}${p?'آخر قطعة: '+esc(p.type)+' ('+p.date+')':''}</small></div></div>${oilWarn(c.id)||licWarn(c.id)?'<span class="tag r">إشعار</span>':''}</div>`}).join('')}`;
+ ${cs.map(c=>{const f=rec(c.id,'fuel')[0],s=rec(c.id,'service')[0],p=rec(c.id,'parts')[0];return `<div class="card row" style="cursor:pointer" data-a="car:${c.id}"><div class="row" style="margin:0">${lg(c)}<div><b style="color:var(--tx)">${esc(c.b)} ${esc(c.m)}</b> · ${esc(c.c)}<br><small>${f?'آخر تفويل: '+f.amt+' ج ('+f.date+') · ':''}${s?'آخر صيانة: '+esc(s.desc||s.shop||'')+' ('+s.date+') · ':''}${p?'آخر قطعة: '+esc(p.type)+' ('+p.date+')':''}</small></div></div><span>${oilWarn(c.id)||licWarn(c.id)?'<span class="tag r">إشعار</span>':''}${ro?'':` <button class="b x" data-a="dcar:${c.id}">حذف</button>`}</span></div>`}).join('')}`;
  const bs=$('#bs');if(bs)bs.onchange=()=>{$('#ob').hidden=bs.value!=='أخرى'}}
 function CAR(a){const c=D.cars.find(x=>x.id===car);
- a.innerHTML=`<div class="card row"><div class="row" style="margin:0">${lg(c)}<h2 style="margin:0">${esc(c.b)} ${esc(c.m)} · ${esc(c.c)}</h2></div><div><small>العداد: ${curKm(c.id)} كم</small>${RO()?'':' <label class="lk no">تغيير اللوجو<input type="file" accept="image/*" data-lg hidden></label>'}</div></div><div class="grid" style="margin-top:14px">${S.map(s=>`<button class="ic" data-a="sec:${s.id}">${badge(c.id,s.id)?'<span class="bd">!</span>':''}<img src="${IMG[s.id]}" alt="">${s.t}</button>`).join('')}<button class="ic" data-a="its"><img src="${IMG.its}" alt="">النقل الذكي</button></div>`}
+ a.innerHTML=`<div class="card row"><div class="row" style="margin:0">${lg(c)}<h2 style="margin:0;font-size:1.125em">${esc(c.b)} ${esc(c.m)} · ${esc(c.c)}</h2></div><div><small>العداد: ${curKm(c.id)} كم</small>${RO()?'':' <label class="lk no" style="font-size:.75em">تغيير اللوجو<input type="file" accept="image/*" data-lg hidden></label>'}</div></div><div class="grid" style="margin-top:14px">${S.map(s=>`<button class="ic" data-a="sec:${s.id}">${badge(c.id,s.id)?'<span class="bd">!</span>':''}<img src="${IMG[s.id]}" alt="">${s.t}</button>`).join('')}<button class="ic" data-a="its"><img src="${IMG.its}" alt="">النقل الذكي</button></div>`}
 function SEC(a){const c=D.cars.find(x=>x.id===car),s=S.find(x=>x.id===sec);
  if(sec==='route')return ROUTE(a);if(sec==='cost')return COST(a,c);
  const rows=rec(car,sec),ro=RO(),ev=editId?(rows.find(r=>r.id===editId)||{}):{};
@@ -130,13 +131,15 @@ function SEC(a){const c=D.cars.find(x=>x.id===car),s=S.find(x=>x.id===sec);
   return `<div class="card row"><span>${s.f.map(([k,l])=>k==='photo'||!r[k]?'':`<b>${l}:</b> ${esc(r[k])}`).filter(Boolean).join(' · ')} ${x}${r.photo?`<br><img src="${r.photo}" style="max-width:160px;border-radius:8px">`:''}</span>${ro?'':`<span class="no">${sec==='license'?`<button class="b" data-a="edit:${r.id}">تعديل</button> `:''}<button class="b x" data-a="del:${i}">حذف</button></span>`}</div>`}).join('')}
 function ROUTE(a){const ro=RO(),cs=mine(),all=[];
  cs.forEach(c=>rec(c.id,'route').forEach(r=>all.push({...r,cid:c.id,cn:c.b+' '+c.m,d:r.date||new Date(r.ts||0).toISOString().slice(0,10)})));
- const rows=all.filter(r=>(RF.car==='all'||r.cid===RF.car)&&(!RF.from||r.d>=RF.from)&&(!RF.to||r.d<=RF.to));
+ const td=T(),pf=RA.per==='day'?td:RA.per==='week'?new Date(Date.now()-6*DAY).toISOString().slice(0,10):RA.per==='month'?td.slice(0,7)+'-01':RA.per==='rng'?(RA.from||'0000'):'0000',pt=RA.per==='day'||RA.per==='week'?td:RA.per==='month'?td.slice(0,7)+'-31':RA.per==='rng'?(RA.to||'9999'):'9999';
+ const rows=all.filter(r=>(!RA.val||(RA.by==='car'?r.cid:RA.by==='drv'?r.drv:r.by)===RA.val)&&r.d>=pf&&r.d<=pt);
  const K={d:r=>r.d,car:r=>r.cn,drv:r=>r.drv||'',by:r=>r.by||''}[RF.sort];
  rows.sort((x,y)=>K(x)<K(y)?-RF.dir:K(x)>K(y)?RF.dir:0);
  const tot=rows.reduce((t,r)=>t+(r.inn&&r.out?(+r.inn)-(+r.out):0),0),mk=k=>RF.sort===k?(RF.dir>0?' ▲':' ▼'):'';
- const sc=RF.car!=='all'?RF.car:car,dv=D.drv[me.id]||[];
+ const sc=(RA.by==='car'&&RA.val)?RA.val:car,dv=D.drv[me.id]||[];
+ const VL=RF.by==='car'?cs.map(c=>[c.id,c.b+' '+c.m]):(RF.by==='drv'?[...new Set(dv.concat(all.map(r=>r.drv)).filter(Boolean))]:[...new Set(all.map(r=>r.by).filter(Boolean))]).map(x=>[x,x]);
  a.innerHTML=`<h2><img src="${IMG.route}" width="48" alt=""> خط السير</h2>
- <form class="no"><label>السيارة<select data-rf="car"><option value="all">كل السيارات</option>${cs.map(c=>`<option value="${c.id}" ${RF.car===c.id?'selected':''}>${esc(c.b+' '+c.m)}</option>`).join('')}</select></label><label>من تاريخ<input type="date" data-rf="from" value="${RF.from}"></label><label>إلى تاريخ<input type="date" data-rf="to" value="${RF.to}"></label></form>
+ <form class="no"><label>البحث بـ<select data-rf="by"><option value="car" ${RF.by==='car'?'selected':''}>السيارة</option><option value="drv" ${RF.by==='drv'?'selected':''}>السائق</option><option value="by" ${RF.by==='by'?'selected':''}>المسئول</option></select></label><label>الاسم<select data-rf="val"><option value="">الكل</option>${VL.map(([v,t])=>`<option value="${esc(v)}" ${RF.val===v?'selected':''}>${esc(t)}</option>`).join('')}</select></label><label>الفترة<select data-rf="per">${[['all','كل الفترات'],['day','يوم'],['week','أسبوع'],['month','شهر'],['rng','فترة معينة']].map(([v,t])=>`<option value="${v}" ${RF.per===v?'selected':''}>${t}</option>`).join('')}</select></label>${RF.per==='rng'?`<label>من<input type="date" data-rf="from" value="${RF.from}"></label><label>إلى<input type="date" data-rf="to" value="${RF.to}"></label>`:''}<button type="button" class="b" data-a="rsearch">بحث</button></form>
  ${ro?'':`<form data-f="drv"><label>إضافة سائق<input name="n" required></label><button class="b">إضافة</button></form><form data-f="add"><label>التاريخ<input name="date" type="date" value="${T()}" required></label><label>السيارة<select name="car" data-oc>${cs.map(c=>`<option value="${c.id}" ${c.id===sc?'selected':''}>${esc(c.b+' '+c.m)}</option>`).join('')}</select></label><label>كيلو الخروج<input name="out" type="number" step="any" min="0" value="${(rec(sc,'route')[0]||{}).inn||''}" required></label><label>كيلو الدخول<input name="inn" type="number" step="any" min="0" required></label><label>السائق<select name="drv" required>${dv.map(x=>`<option>${esc(x)}</option>`).join('')}</select></label><label>وصف المشوار<input name="desc"></label><label>المسئول بالتكليف<input name="by"></label><button class="b">إضافة مشوار</button></form>`}
  <div class="card" style="overflow-x:auto"><table><tr><th class="s" data-a="rs:d">التاريخ${mk('d')}</th><th class="s" data-a="rs:car">السيارة${mk('car')}</th><th class="s" data-a="rs:drv">السائق${mk('drv')}</th><th class="s" data-a="rs:by">المسئول${mk('by')}</th><th>خروج</th><th>دخول</th><th>المسافة</th><th>الوصف</th><th class="no"></th></tr>
  ${rows.map(r=>`<tr><td>${esc(r.d)}</td><td>${esc(r.cn)}</td><td>${esc(r.drv)}</td><td>${esc(r.by)}</td><td>${esc(r.out)}</td><td>${esc(r.inn)}</td><td>${r.inn&&r.out?r.inn-r.out:''}</td><td>${esc(r.desc)}</td><td class="no">${ro?'':`<button class="b x" data-a="delr:${r.cid}:${r.id}">حذف</button>`}</td></tr>`).join('')||'<tr><td colspan="9">لا توجد مشاوير</td></tr>'}
@@ -154,10 +157,12 @@ const ACT={view(v){view=v;R()},out(){signOut(auth)},
  sec(v){sec=v;editId=null;R()},its(){msg('صفحة النقل الذكي قيد الإنشاء وستتوفر قريبًا')},
  back(){editId=null;if(payv)payv=false;else if(sec)sec=null;else car=null;R()},
  home(){editId=null;payv=false;car=sec=null;if(!me)view='login';if(location.hash==='#admin')location.hash='';R()},
- print(){window.print()},edit(v){editId=v;R()},cancel(){editId=null;R()},
+ print(){window.print()},edit(v){if(!confirm('تأكيد التعديل'))return;editId=v;R()},cancel(){editId=null;R()},
+ rsearch(){RA={by:RF.by,val:RF.val,per:RF.per,from:RF.from,to:RF.to};R()},
  rs(k){RF.dir=RF.sort===k?-RF.dir:1;RF.sort=k;R()},
- async del(v){const r=D.recs[car][sec][+v];try{await deleteDoc(doc(db,'users',me.id,'recs',r.id))}catch(e){msg(fb(e))}},
- async delr(c,id){try{await deleteDoc(doc(db,'users',me.id,'recs',id))}catch(e){msg(fb(e))}},
+ async dcar(id){if(!confirm('تأكيد الحذف'))return;try{const rs=Object.values(D.recs[id]||{}).flat();await Promise.all(rs.map(r=>deleteDoc(doc(db,'users',me.id,'recs',r.id))));await deleteDoc(doc(db,'users',me.id,'cars',id));if(car===id)car=null;if(RA.by==='car'&&RA.val===id)RA.val='';if(RF.by==='car'&&RF.val===id)RF.val=''}catch(e){msg(fb(e))}},
+ async del(v){if(!confirm('تأكيد الحذف'))return;const r=D.recs[car][sec][+v];try{await deleteDoc(doc(db,'users',me.id,'recs',r.id))}catch(e){msg(fb(e))}},
+ async delr(c,id){if(!confirm('تأكيد الحذف'))return;try{await deleteDoc(doc(db,'users',me.id,'recs',id))}catch(e){msg(fb(e))}},
  async adm(u,p){const x=p==='monthly'?{until:Timestamp.fromMillis(Date.now()+30*DAY)}:p==='yearly'?{until:Timestamp.fromMillis(Date.now()+365*DAY)}:{};try{await updateDoc(doc(db,'users',u),{plan:p,...x})}catch(e){msg(fb(e))}}};
 document.addEventListener('click',e=>{const a=e.target.closest('[data-a]');if(!a)return;const[n,...v]=a.dataset.a.split(':');ACT[n]&&ACT[n](...v)});
 const AE={'auth/invalid-credential':'الإيميل أو كلمة السر غير صحيحة','auth/email-already-in-use':'هذا الإيميل مسجل من قبل','auth/weak-password':'كلمة السر ضعيفة (٦ أحرف على الأقل)','auth/invalid-email':'الإيميل غير صحيح','auth/too-many-requests':'محاولات كثيرة، حاول بعد قليل','permission-denied':'غير مسموح — قد يكون الاشتراك منتهيًا'};
@@ -175,9 +180,9 @@ async add(f){if(RO())return msg(NA);const r={};for(const[k,v]of f.entries()){if(
 FS.adm=FS.login;
 document.addEventListener('submit',e=>{e.preventDefault();const f=FS[e.target.dataset.f];f&&f(new FormData(e.target))});
 document.addEventListener('change',async e=>{const t=e.target;
- if(t.dataset.rf!==undefined){RF[t.dataset.rf]=t.value;return R()}
+ if(t.dataset.rf!==undefined){if(t.dataset.rf==='by')RF.val='';RF[t.dataset.rf]=t.value;return R()}
  if(t.dataset.oc!==undefined){const o=document.querySelector('[name=out]');if(o)o.value=(rec(t.value,'route')[0]||{}).inn||'';return}
- if(t.dataset.lg!==undefined&&t.files&&t.files[0]){if(RO())return msg(NA);const u=await shrink(t.files[0],160,'image/png');try{await updateDoc(doc(db,'users',me.id,'cars',car),{logo:u})}catch(x){msg(fb(x))}}});
+ if(t.dataset.lg!==undefined&&t.files&&t.files[0]){if(RO())return msg(NA);if(!confirm('تأكيد التعديل')){t.value='';return}const u=await shrink(t.files[0],160,'image/png');try{await updateDoc(doc(db,'users',me.id,'cars',car),{logo:u})}catch(x){msg(fb(x))}}});
 addEventListener('hashchange',R);
 const ms=t=>t&&t.toMillis?t.toMillis():(t||0);
 const uf=(id,d)=>({id,...d,created:ms(d.created),until:ms(d.until)});
