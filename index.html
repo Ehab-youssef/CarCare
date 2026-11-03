@@ -49,7 +49,7 @@ header{background:#03010f;justify-content:center;padding:8px 12px}header .hb{dis
 <g transform="translate(284 0)"><path d="M8 40 H30 V32 Q30 24 22 24 H14 Q8 24 8 32 V48 Q8 56 14 56 H30"/></g>
 </g></svg></div></header>
 <main><div id="tb"></div><div id="msg"></div><div id="app"></div><div id="bb"></div></main>
-<footer>copywrite ehab.youssef.eg 01004445644<br><button id="inst" class="lk" hidden style="color:#ffd21f">📲 تثبيت التطبيق</button></footer>
+<footer>Copyright ehab.youssef.eg 01004445644<br><button id="inst" class="lk" hidden style="color:#ffd21f">📲 تثبيت التطبيق</button></footer>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import{getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,sendPasswordResetEmail,updatePassword,reauthenticateWithCredential,EmailAuthProvider}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -96,10 +96,10 @@ const LGU='https://raw.githubusercontent.com/filippofilip95/car-logos-dataset/ma
 const lg=c=>c.logo?`<img class="lgb" src="${c.logo}" alt="">`:SLUG[c.b]?`<img class="lgb" src="${LGU}${SLUG[c.b]}.png" data-l="${esc(c.b[0])}" alt="">`:`<div class="rl">${esc(c.b[0])}</div>`;
 document.addEventListener('error',e=>{const t=e.target;if(t&&t.classList&&t.classList.contains('lgb')&&t.dataset.l){const d=document.createElement('div');d.className='rl';d.textContent=t.dataset.l;t.replaceWith(d)}},true);
 function TB(){const t=$('#tb');if(!me){t.innerHTML='';return}
- const d=Math.ceil((me.until-Date.now())/DAY);let n='';
+ const d=Math.ceil((me.until-Date.now())/DAY);let n='';const pb=(me.plan==='monthly'||me.plan==='yearly')?(d<=3?'تجديد الحساب':''):'حساب مدفوع';
  if(st(me)==='x')n='انتهت مدة حسابك. يمكنك التصفح فقط حتى يتم تنشيط حساب مدفوع';
  else if(me.plan!=='trial'&&d<=3)n='باقي '+(d<=1?'يوم واحد':d===2?'يومان':d+' أيام')+' على التفعيل';
- t.innerHTML=`<div class="tbr no"><button class="pd" data-a="pay">حساب مدفوع</button><span><button class="lk" data-a="cpw">تغيير كلمة السر</button><button class="lk" data-a="out">تسجيل خروج</button></span></div>${n?`<div class="al">${n}</div>`:''}`}
+ t.innerHTML=`<div class="tbr no">${pb?`<button class="pd" data-a="pay">${pb}</button>`:'<span></span>'}<span><button class="lk" data-a="cpw">تغيير كلمة السر</button><button class="lk" data-a="out">تسجيل خروج</button></span></div>${n?`<div class="al">${n}</div>`:''}`}
 function BB(){const b=$('#bb');if(!me){b.innerHTML='';return}
  b.innerHTML=`<div class="bbr no">${!car&&!payv&&!cpw?'<span></span>':'<div><button class="b" data-a="back" title="رجوع خطوة" style="font-size:1.3em;line-height:1">↩︎</button> <button class="b sm" data-a="home">القائمة الرئيسية</button></div>'}${payv||cpw?'':'<button class="b" data-a="print">طباعة PDF</button>'}</div>`}
 function R(){msg();const a=$('#app');
@@ -118,7 +118,7 @@ function LI(a){a.innerHTML=`<form class="one" data-f="login"><h2>تسجيل ال
 function SU(a){a.innerHTML=`<form class="one" data-f="su"><h2>حساب جديد (٧ أيام مجانًا)</h2><label>الاسم الأول<input name="fn" required></label><label>اللقب<input name="ln" required></label><label>الإيميل<input name="e" type="email" required></label><label>كلمة السر<input name="p" type="password" minlength="6" required></label><label>رقم الموبايل<input name="m" type="tel" required></label><label>نوع الحساب<select name="t"><option value="ind">عميل فردي (٣ سيارات)</option><option value="co">شركة (١٠ سيارات)</option></select></label><button class="b">تسجيل</button><button type="button" class="lk" data-a="view:login">عندي حساب</button></form>`}
 function PW(a){const pr=me.type==='co'?[50,500]:[30,300],amt=pp==='y'?pr[1]:pr[0];
  const wa='https://wa.me/2'+PHONE+'?text='+encodeURIComponent('تم تحويل '+amt+' ج لتفعيل حساب CarCare - '+me.email);
- a.innerHTML=`<div class="card" style="text-align:center"><h2>تنشيط حساب مدفوع</h2><p>لتفعيل حسابك المدفوع اختار مدة الدفع</p><div class="grid" style="max-width:360px;margin:auto"><button class="ic ${pp==='m'?'sl':''}" data-a="pp:m"><span class="em">📅</span>شهري</button><button class="ic ${pp==='y'?'sl':''}" data-a="pp:y"><span class="em">🗓️</span>سنوي</button></div>${pp?`<p style="margin-top:16px">لتفعيل حسابك برجاء تحويل مبلغ <b>${amt}ج</b> لفودافون كاش او انستاباي على الرقم <b dir="ltr">${PHONE}</b> وارسال رسالة واتس أب بصورة التحويل لنفس الرقم</p><a class="b" target="_blank" rel="noopener" href="${wa}">إرسال على واتساب</a>`:''}</div>`}
+ a.innerHTML=`<div class="card" style="text-align:center"><h2>${me.plan==='monthly'||me.plan==='yearly'?'تجديد الحساب':'تنشيط حساب مدفوع'}</h2><p>لتفعيل حسابك المدفوع اختار مدة الدفع</p><div class="grid" style="max-width:360px;margin:auto"><button class="ic ${pp==='m'?'sl':''}" data-a="pp:m"><span class="em">📅</span>شهري</button><button class="ic ${pp==='y'?'sl':''}" data-a="pp:y"><span class="em">🗓️</span>سنوي</button></div>${pp?`<p style="margin-top:16px">لتفعيل حسابك برجاء تحويل مبلغ <b>${amt}ج</b> لفودافون كاش او انستاباي على الرقم <b dir="ltr">${PHONE}</b> وارسال رسالة واتس أب بصورة التحويل لنفس الرقم</p><a class="b" target="_blank" rel="noopener" href="${wa}">إرسال على واتساب</a>`:''}</div>`}
 function CARS(a){const cs=mine(),ro=RO(),left=me.plan==='trial'?Math.max(0,Math.ceil((me.created+7*DAY-Date.now())/DAY)):0;
  a.innerHTML=`<div style="text-align:center;margin:4vh 0 10px"><h2>مرحبًا ${esc(me.fn)} ${esc(me.ln)} 👋</h2>${left&&!ro?`<div class="card">الفترة المجانية: باقي ${left} يوم</div>`:''}<div class="grid" style="max-width:190px;margin:14px auto 0"><div class="ic"><img src="${LOGO}" alt="">عربيتي (${cs.length}/${lim()})</div></div></div>
  ${ro?'':cs.length<lim()?`<form data-f="car"><label>نوع السيارة<select name="b" id="bs">${BR.map(b=>`<option>${b}</option>`).join('')}</select></label><label id="ob" hidden>اكتب النوع<input name="o"></label><label>الموديل<input name="m" required></label><label>اللون<input name="c" required></label><button class="b">إضافة سيارة</button></form>`:'<div class="card">وصلت للحد الأقصى من السيارات.</div>'}
@@ -176,7 +176,7 @@ const ACT={view(v){view=v;R()},out(){signOut(auth)},
  async dcar(id){if(!confirm('تأكيد الحذف'))return;try{const rs=Object.values(D.recs[id]||{}).flat();await Promise.all(rs.map(r=>deleteDoc(doc(db,'users',me.id,'recs',r.id))));await deleteDoc(doc(db,'users',me.id,'cars',id));if(car===id)car=null;if(RA.by==='car'&&RA.val===id)RA.val='';if(RF.by==='car'&&RF.val===id)RF.val=''}catch(e){msg(fb(e))}},
  async del(v){if(!confirm('تأكيد الحذف'))return;const r=D.recs[car][sec][+v];try{await deleteDoc(doc(db,'users',me.id,'recs',r.id))}catch(e){msg(fb(e))}},
  async delr(c,id){if(!confirm('تأكيد الحذف'))return;try{await deleteDoc(doc(db,'users',me.id,'recs',id))}catch(e){msg(fb(e))}},
- async adm(u,p){const x=p==='monthly'?{until:Timestamp.fromMillis(Date.now()+30*DAY)}:p==='yearly'?{until:Timestamp.fromMillis(Date.now()+365*DAY)}:{};try{await updateDoc(doc(db,'users',u),{plan:p,...x})}catch(e){msg(fb(e))}}};
+ async adm(u,p){const cu=D.users.find(x=>x.id===u),b=Math.max(Date.now(),cu&&(cu.plan==='monthly'||cu.plan==='yearly')?cu.until||0:0),x=p==='monthly'?{until:Timestamp.fromMillis(b+30*DAY)}:p==='yearly'?{until:Timestamp.fromMillis(b+365*DAY)}:{};try{await updateDoc(doc(db,'users',u),{plan:p,...x})}catch(e){msg(fb(e))}}};
 document.addEventListener('click',e=>{const a=e.target.closest('[data-a]');if(!a)return;const[n,...v]=a.dataset.a.split(':');ACT[n]&&ACT[n](...v)});
 const AE={'auth/invalid-credential':'الإيميل أو كلمة السر غير صحيحة','auth/email-already-in-use':'هذا الإيميل مسجل من قبل','auth/weak-password':'كلمة السر ضعيفة (٦ أحرف على الأقل)','auth/invalid-email':'الإيميل غير صحيح','auth/too-many-requests':'محاولات كثيرة، حاول بعد قليل','permission-denied':'غير مسموح — قد يكون الاشتراك منتهيًا'};
 const fb=e=>AE[e.code]||AE[(e.code||'').replace('firestore/','')]||('خطأ: '+(e.code||e.message));
