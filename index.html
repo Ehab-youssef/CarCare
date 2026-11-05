@@ -41,6 +41,7 @@ header{background:#03010f;justify-content:center;padding:8px 12px}header .hb{dis
 .adm{font-size:.75em}.adm h2{font-size:1.5em}.adm td,.adm th{font-size:.675rem;padding:4px}.adm button.b{font-size:.675rem;padding:4px 8px;margin:2px 1px}.adm .lk{font-size:.75rem}
 [hidden]{display:none!important}
 #msg:not(:empty){position:sticky;top:0;z-index:50;background:#fff;padding:8px 12px;border-radius:10px;box-shadow:0 2px 10px #0003;margin-bottom:8px}
+.tag{white-space:nowrap;display:inline-block;margin:2px 0}
 </style></head><body>
 <header><div class="hb" data-a="home"><img id="lg" alt="CarCare"></div></header>
 <main><div id="tb"></div><div id="msg"></div><div id="app"></div><div id="bb"></div></main>
@@ -68,7 +69,7 @@ const S=[
 {id:'service',t:'صيانة',f:[['date','التاريخ','date'],['shop','اسم الورشة','text'],['desc','وصف الحالة','text'],['cost','التكلفة (ج.م)','number']]},
 {id:'fuel',t:'بنزين',f:[['date','التاريخ','date'],['amt','المبلغ (ج.م)','number'],['km','كيلومتر السيارة الآن','number']]},
 {id:'oil',t:'تغيير زيت',f:[['date','التاريخ','date'],['cost','التكلفة (ج.م)','number'],['km','كيلومتر التغيير','number'],['next','التغيير القادم عند (كم)','number']]},
-{id:'parts',t:'قطع غيار',f:[['date','التاريخ','date'],['type','نوع القطعة','text'],['price','السعر','number'],['labor','المصنعية','number'],['km','كيلو متر التغيير','number'],['valid','صالحة لـ (كم)','number']]},
+{id:'parts',t:'قطع غيار',f:[['date','التاريخ','date'],['type','نوع القطعة','text'],['price','السعر','number'],['labor','المصنعية','number'],['km','كيلو متر التغيير','number'],['valid','صالحة لـ (كم)','number'],['months','صالحة لـ (شهر)','number']]},
 {id:'cost',t:'مصروفات',f:[]},
 {id:'license',t:'تراخيص',f:[['kind','النوع','sel',['رخصة السيارة','رخصة القيادة']],['start','بداية الترخيص','date'],['end','نهاية الترخيص','date'],['photo','صورة الرخصة','file']]},
 {id:'route',t:'خط سير',f:[['car','السيارة','car'],['out','كيلو الخروج','number'],['inn','كيلو الدخول','number'],['drv','السائق','drv'],['desc','وصف المشوار','text'],['by','المسئول بالتكليف','text']]}];
@@ -81,7 +82,7 @@ const stl=u=>({t:'تجريبي',p:u.plan==='yearly'?'مدفوع سنوي':'مد�
 function curKm(c){let m=0;rec(c,'fuel').concat(rec(c,'oil'),rec(c,'parts')).forEach(r=>m=Math.max(m,+r.km||0));rec(c,'route').forEach(r=>m=Math.max(m,+r.inn||0,+r.out||0));rec(c,'its').forEach(r=>m=Math.max(m,+r.kmE||0,+r.kmS||0));return m}
 const dleft=d=>Math.ceil((new Date(d)-new Date(T()))/DAY);
 function oilWarn(c){const o=rec(c,'oil')[0];return o&&+o.next&&curKm(c)>=+o.next-300}
-function partsDue(c){const seen={},out=[],k=curKm(c);rec(c,'parts').forEach(r=>{const t=(r.type||'').trim().toLowerCase();if(seen[t])return;seen[t]=1;if(r.next&&k>=+r.next-300)out.push({type:r.type,left:+r.next-k})});return out}
+function partsDue(c){const seen={},out=[],k=curKm(c);rec(c,'parts').forEach(r=>{const t=(r.type||'').trim().toLowerCase();if(seen[t])return;seen[t]=1;const kmW=r.next&&k>=+r.next-300,dayW=r.dueDate&&dleft(r.dueDate)<=30;if(kmW||dayW)out.push({type:r.type,left:r.next?+r.next-k:null,days:r.dueDate?dleft(r.dueDate):null,kmW:!!kmW,dayW:!!dayW})});return out}
 const partsWarn=c=>partsDue(c).length>0;
 function licWarn(c){return rec(c,'license').some(r=>r.end&&dleft(r.end)<=30)}
 const badge=(c,s)=>(s==='oil'&&oilWarn(c))||(s==='parts'&&partsWarn(c))||(s==='license'&&licWarn(c));
@@ -133,14 +134,16 @@ function SEC(a){const c=D.cars.find(x=>x.id===car),s=S.find(x=>x.id===sec);
   if(t==='sel')return `<label>${l}<select name="${k}">${o.map(x=>`<option ${ev[k]===x?'selected':''}>${x}</option>`).join('')}</select></label>`;
   if(t==='file')return `<label>${l}${ev.photo?' (الحالية محفوظة)':''}<input name="${k}" type="file" accept="image/*"></label>`;
   const v=ev[k]!==undefined?ev[k]:(t==='date'?T():'');
-  return `<label>${l}<input name="${k}" type="${t}" value="${esc(v)}" ${t==='number'?'step="any" min="0"':''} ${k==='next'||k==='labor'||(sec==='parts'&&(k==='km'||k==='valid'))?'':'required'}></label>`}).join('');
+  return `<label>${l}<input name="${k}" type="${t}" value="${esc(v)}" ${t==='number'?'step="any" min="0"':''} ${k==='next'||k==='labor'||(sec==='parts'&&(k==='km'||k==='valid'||k==='months'))?'':'required'}></label>`}).join('');
  let top='';if(sec==='oil'&&oilWarn(car))top='<div class="card"><span class="tag r">تنبيه</span> باقي أقل من ٣٠٠ كم على تغيير الزيت أو تجاوزت الموعد</div>';
- if(sec==='parts'){const w=partsDue(car);if(w.length)top='<div class="card"><span class="tag r">تنبيه</span> '+w.map(x=>esc(x.type)+(x.left>0?' (باقي '+x.left+' كم)':' (تجاوزت الموعد بـ'+(-x.left)+' كم)')).join(' · ')+'</div>'}
+ if(sec==='parts'){const w=partsDue(car);if(w.length)top='<div class="card"><span class="tag r">تنبيه</span> '+w.map(x=>esc(x.type)+' ('+[x.kmW?(x.left>0?'باقي '+x.left+' كم':'تجاوزت الموعد بـ'+(-x.left)+' كم'):'',x.dayW?(x.days>=0?'باقي '+x.days+' يوم':'انتهت صلاحيتها'):''].filter(Boolean).join(' / ')+')').join(' · ')+'</div>'}
  const sk=rows.filter(r=>r.km).map(r=>+r.km);
  a.innerHTML=`<h2><img src="${IMG[s.id]}" width="48" alt=""> ${s.t}</h2>${top}${ro?'':`<form data-f="add">${fld}<button class="b">${editId?'حفظ التعديل':'إضافة'}</button>${editId?'<button type="button" class="lk" data-a="cancel">إلغاء التعديل</button>':''}</form>`}`+
  rows.map((r,i)=>{let x='';
   if(sec==='fuel'){const p=sk.filter(k=>k<+r.km);if(p.length)x=`<span class="tag">سارت ${r.km-Math.max(...p)} كم منذ التفويلة السابقة</span>`}
-  if(sec==='parts'){x=`<span class="tag">الإجمالي ${r.total}</span>`;if(r.next){const L=+r.next-curKm(car),first=rows.findIndex(y=>(y.type||'').trim().toLowerCase()===(r.type||'').trim().toLowerCase())===i;x+=` <span class="tag">القادم عند ${r.next} كم</span>`+(first?` <span class="tag ${L<=300?'r':''}">${L>0?'باقي '+L+' كم':'تجاوزت الموعد بـ'+(-L)+' كم'}</span>`:'')}}
+  if(sec==='parts'){x=`<span class="tag">الإجمالي ${r.total}</span>`;const first=rows.findIndex(y=>(y.type||'').trim().toLowerCase()===(r.type||'').trim().toLowerCase())===i;
+   if(r.next){const L=+r.next-curKm(car);x+=` <span class="tag">القادم عند ${r.next} كم</span>`+(first?` <span class="tag ${L<=300?'r':''}">${L>0?'باقي '+L+' كم':'تجاوزت الموعد بـ'+(-L)+' كم'}</span>`:'')}
+   if(r.dueDate){const D2=dleft(r.dueDate);x+=` <span class="tag">تنتهي بتاريخ ${dl(r.dueDate)}</span>`+(first?` <span class="tag ${D2<=30?'r':''}">${D2>=0?'باقي '+D2+' يوم':'انتهت صلاحيتها'}</span>`:'')}}
   if(sec==='license'&&r.end){const d=dleft(r.end);x=`<span class="tag ${d<=30?'r':''}">${d>=0?'باقي '+d+' يوم':'منتهية'}</span>`}
   return `<div class="card row"><span>${s.f.map(([k,l])=>k==='photo'||!r[k]?'':`<b>${l}:</b> ${esc(r[k])}`).filter(Boolean).join(' · ')} ${x}${r.photo?`<br><img src="${r.photo}" style="max-width:160px;border-radius:8px">`:''}</span>${ro?'':`<span class="no">${sec==='license'?`<button class="b" data-a="edit:${r.id}">تعديل</button> `:''}<button class="b x" data-a="del:${i}">حذف</button></span>`}</div>`}).join('')}
 function ROUTE(a){const ro=RO(),cs=mine(),all=[];
@@ -237,7 +240,7 @@ async drv(f){if(RO())return msg(NA);try{await addDoc(collection(db,'users',me.id
 async add(f){if(RO())return msg(NA);const r={};for(const[k,v]of f.entries()){if(v instanceof File){if(v.size)r[k]=await shrink(v,700)}else if(v!=='')r[k]=v}
  if(editId){const id=editId;editId=null;try{await updateDoc(doc(db,'users',me.id,'recs',id),r)}catch(e){msg(fb(e))}return R()}
  if(sec==='its'){const pcs=r.pcs,pcm=r.pcm;delete r.pcs;delete r.pcm;const pr=+r.price||0,pc=pcs==='يدوي'?(+pcm||0):(+pcs||0),km=(+r.kmE||0)-(+r.kmS||0);if(km<=0)return msg('كيلو متر الوصول يجب أن يكون أكبر من كيلو متر البداية');r.pct=pc;r.due=n2(pr-pr*pc/100);r.kmT=n2(km);r.cpk=n2(r.due/km)}
- let tc=car;if(sec==='route'||sec==='its'){tc=r.car||car;delete r.car}if(sec==='parts'){r.total=(+r.price||0)+(+r.labor||0);if(r.km&&r.valid)r.next=(+r.km)+(+r.valid)}
+ let tc=car;if(sec==='route'||sec==='its'){tc=r.car||car;delete r.car}if(sec==='parts'){r.total=(+r.price||0)+(+r.labor||0);if(r.km&&r.valid)r.next=(+r.km)+(+r.valid);if(r.months&&r.date){const d=new Date(r.date+'T00:00:00'),p=n=>String(n).padStart(2,'0');d.setMonth(d.getMonth()+(+r.months));r.dueDate=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}}
  try{await addDoc(collection(db,'users',me.id,'recs'),{...r,car:tc,sec,ts:Date.now()});if(sec==='its')ok('تمت إضافة الرحلة')}catch(e){msg(fb(e))}}};
 FS.forgot=async f=>{try{await sendPasswordResetEmail(auth,f.get('e').trim());ok('إذا كان الإيميل مسجلًا لدينا فقد أرسلنا رابط الاسترجاع. راجع صندوق الوارد ورسائل Spam')}catch(e){msg(fb(e))}};
 FS.chpw=async f=>{const n=f.get('n');if(n!==f.get('n2'))return msg('كلمتا السر الجديدتان غير متطابقتين');try{const u=auth.currentUser;await reauthenticateWithCredential(u,EmailAuthProvider.credential(u.email,f.get('o')));await updatePassword(u,n);ok('تم تغيير كلمة السر بنجاح')}catch(e){msg(e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'?'كلمة السر الحالية غير صحيحة':fb(e))}};
