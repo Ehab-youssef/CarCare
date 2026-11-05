@@ -68,7 +68,7 @@ const S=[
 {id:'service',t:'صيانة',f:[['date','التاريخ','date'],['shop','اسم الورشة','text'],['desc','وصف الحالة','text'],['cost','التكلفة (ج.م)','number']]},
 {id:'fuel',t:'بنزين',f:[['date','التاريخ','date'],['amt','المبلغ (ج.م)','number'],['km','كيلومتر السيارة الآن','number']]},
 {id:'oil',t:'تغيير زيت',f:[['date','التاريخ','date'],['cost','التكلفة (ج.م)','number'],['km','كيلومتر التغيير','number'],['next','التغيير القادم عند (كم)','number']]},
-{id:'parts',t:'قطع غيار',f:[['date','التاريخ','date'],['type','نوع القطعة','text'],['price','السعر','number'],['labor','المصنعية','number']]},
+{id:'parts',t:'قطع غيار',f:[['date','التاريخ','date'],['type','نوع القطعة','text'],['price','السعر','number'],['labor','المصنعية','number'],['km','كيلو متر التغيير','number'],['valid','صالحة لـ (كم)','number']]},
 {id:'cost',t:'مصروفات',f:[]},
 {id:'license',t:'تراخيص',f:[['kind','النوع','sel',['رخصة السيارة','رخصة القيادة']],['start','بداية الترخيص','date'],['end','نهاية الترخيص','date'],['photo','صورة الرخصة','file']]},
 {id:'route',t:'خط سير',f:[['car','السيارة','car'],['out','كيلو الخروج','number'],['inn','كيلو الدخول','number'],['drv','السائق','drv'],['desc','وصف المشوار','text'],['by','المسئول بالتكليف','text']]}];
@@ -78,11 +78,13 @@ const mine=()=>D.cars.filter(c=>c.uid===me.id);
 const lim=()=>me.type==='co'?10:3;
 function st(u){const n=Date.now();if(u.plan==='cancelled')return'x';if(u.plan==='trial')return n<u.created+7*DAY?'t':'x';return n<u.until?'p':'x'}
 const stl=u=>({t:'تجريبي',p:u.plan==='yearly'?'مدفوع سنوي':'مدفوع شهري',x:u.plan==='cancelled'?'ملغي':'منتهي'}[st(u)]);
-function curKm(c){let m=0;rec(c,'fuel').concat(rec(c,'oil')).forEach(r=>m=Math.max(m,+r.km||0));rec(c,'route').forEach(r=>m=Math.max(m,+r.inn||0,+r.out||0));return m}
+function curKm(c){let m=0;rec(c,'fuel').concat(rec(c,'oil'),rec(c,'parts')).forEach(r=>m=Math.max(m,+r.km||0));rec(c,'route').forEach(r=>m=Math.max(m,+r.inn||0,+r.out||0));rec(c,'its').forEach(r=>m=Math.max(m,+r.kmE||0,+r.kmS||0));return m}
 const dleft=d=>Math.ceil((new Date(d)-new Date(T()))/DAY);
-function oilWarn(c){const o=rec(c,'oil')[0];return o&&+o.next&&curKm(c)>=+o.next-100}
+function oilWarn(c){const o=rec(c,'oil')[0];return o&&+o.next&&curKm(c)>=+o.next-300}
+function partsDue(c){const seen={},out=[],k=curKm(c);rec(c,'parts').forEach(r=>{const t=(r.type||'').trim().toLowerCase();if(seen[t])return;seen[t]=1;if(r.next&&k>=+r.next-300)out.push({type:r.type,left:+r.next-k})});return out}
+const partsWarn=c=>partsDue(c).length>0;
 function licWarn(c){return rec(c,'license').some(r=>r.end&&dleft(r.end)<=30)}
-const badge=(c,s)=>(s==='oil'&&oilWarn(c))||(s==='license'&&licWarn(c));
+const badge=(c,s)=>(s==='oil'&&oilWarn(c))||(s==='parts'&&partsWarn(c))||(s==='license'&&licWarn(c));
 const RO=()=>!!me&&st(me)==='x';
 let RF={by:'car',val:'',per:'all',from:'',to:'',sort:'d',dir:-1},RA={by:'car',val:'',per:'all',from:'',to:''};
 const shrink=(f,m,t='image/jpeg')=>new Promise(res=>{const fr=new FileReader();fr.onload=()=>{const i=new Image();i.onload=()=>{const q=Math.min(1,m/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.round(i.width*q);c.height=Math.round(i.height*q);c.getContext('2d').drawImage(i,0,0,c.width,c.height);res(c.toDataURL(t,.6))};i.src=fr.result};fr.readAsDataURL(f)});
@@ -119,7 +121,7 @@ function CARS(a){const cs=mine(),ro=RO(),left=me.plan==='trial'?Math.max(0,Math.
  a.innerHTML=`<div style="text-align:center;margin:4vh 0 10px"><h2>مرحبًا ${esc(me.fn)} ${esc(me.ln)} 👋</h2>${left&&!ro?`<div class="card">الفترة المجانية: باقي ${left} يوم</div>`:''}<div class="grid" style="max-width:190px;margin:14px auto 0"><div class="ic"><img src="${LOGO}" alt="">عربيتي (${cs.length}/${lim()})</div></div></div>
  ${ro?'':cs.length<lim()?`<form data-f="car"><label>نوع السيارة<select name="b" id="bs">${BR.map(b=>`<option>${b}</option>`).join('')}</select></label><label id="ob" hidden>اكتب النوع<input name="o"></label><label>الموديل<input name="m" required></label><label>اللون<input name="c" required></label><button class="b">إضافة سيارة</button></form>`:'<div class="card">وصلت للحد الأقصى من السيارات.</div>'}
  ${cs.map(c=>{const L=(s,k,l)=>{const r=rec(c.id,s)[0];return `<div>${l} = ${r?k(r):'—'}${r?' بتاريخ '+dl(r.date):''}</div>`};
- return `<div class="card" style="cursor:pointer" data-a="car:${c.id}"><div class="row" style="margin:0;justify-content:flex-start">${lg(c)}<div><b style="color:var(--tx)">${esc(c.b)} ${esc(c.m)}</b> · ${esc(c.c)} ${oilWarn(c.id)||licWarn(c.id)?'<span class="tag r">إشعار</span>':''}</div></div><div style="margin:10px 0;line-height:1.9">${L('fuel',r=>esc(r.amt)+' ج','آخر تفويلة')}${L('service',r=>esc(r.desc||r.shop||''),'آخر صيانة')}${L('parts',r=>esc(r.type),'آخر قطعة غيار')}${L('oil',r=>esc(r.cost||'')+' ج','آخر تغيير زيت')}</div>${ro?'':`<button class="b x" data-a="dcar:${c.id}">حذف السيارة</button>`}</div>`}).join('')}
+ return `<div class="card" style="cursor:pointer" data-a="car:${c.id}"><div class="row" style="margin:0;justify-content:flex-start">${lg(c)}<div><b style="color:var(--tx)">${esc(c.b)} ${esc(c.m)}</b> · ${esc(c.c)} ${oilWarn(c.id)||partsWarn(c.id)||licWarn(c.id)?'<span class="tag r">إشعار</span>':''}</div></div><div style="margin:10px 0;line-height:1.9">${L('fuel',r=>esc(r.amt)+' ج','آخر تفويلة')}${L('service',r=>esc(r.desc||r.shop||''),'آخر صيانة')}${L('parts',r=>esc(r.type),'آخر قطعة غيار')}${L('oil',r=>esc(r.cost||'')+' ج','آخر تغيير زيت')}</div>${ro?'':`<button class="b x" data-a="dcar:${c.id}">حذف السيارة</button>`}</div>`}).join('')}
  <div class="grid" style="max-width:190px;margin:24px auto 0"><button class="ic" data-a="agg"><img src="${IMG.agg}" alt="">مجمع</button></div>`;
  const bs=$('#bs');if(bs)bs.onchange=()=>{$('#ob').hidden=bs.value!=='أخرى'}}
 function CAR(a){const c=D.cars.find(x=>x.id===car);
@@ -131,13 +133,14 @@ function SEC(a){const c=D.cars.find(x=>x.id===car),s=S.find(x=>x.id===sec);
   if(t==='sel')return `<label>${l}<select name="${k}">${o.map(x=>`<option ${ev[k]===x?'selected':''}>${x}</option>`).join('')}</select></label>`;
   if(t==='file')return `<label>${l}${ev.photo?' (الحالية محفوظة)':''}<input name="${k}" type="file" accept="image/*"></label>`;
   const v=ev[k]!==undefined?ev[k]:(t==='date'?T():'');
-  return `<label>${l}<input name="${k}" type="${t}" value="${esc(v)}" ${t==='number'?'step="any" min="0"':''} ${k==='next'||k==='labor'?'':'required'}></label>`}).join('');
- let top='';if(sec==='oil'&&oilWarn(car))top='<div class="card"><span class="tag r">تنبيه</span> باقي أقل من ١٠٠ كم على تغيير الزيت</div>';
+  return `<label>${l}<input name="${k}" type="${t}" value="${esc(v)}" ${t==='number'?'step="any" min="0"':''} ${k==='next'||k==='labor'||(sec==='parts'&&(k==='km'||k==='valid'))?'':'required'}></label>`}).join('');
+ let top='';if(sec==='oil'&&oilWarn(car))top='<div class="card"><span class="tag r">تنبيه</span> باقي أقل من ٣٠٠ كم على تغيير الزيت أو تجاوزت الموعد</div>';
+ if(sec==='parts'){const w=partsDue(car);if(w.length)top='<div class="card"><span class="tag r">تنبيه</span> '+w.map(x=>esc(x.type)+(x.left>0?' (باقي '+x.left+' كم)':' (تجاوزت الموعد بـ'+(-x.left)+' كم)')).join(' · ')+'</div>'}
  const sk=rows.filter(r=>r.km).map(r=>+r.km);
  a.innerHTML=`<h2><img src="${IMG[s.id]}" width="48" alt=""> ${s.t}</h2>${top}${ro?'':`<form data-f="add">${fld}<button class="b">${editId?'حفظ التعديل':'إضافة'}</button>${editId?'<button type="button" class="lk" data-a="cancel">إلغاء التعديل</button>':''}</form>`}`+
  rows.map((r,i)=>{let x='';
   if(sec==='fuel'){const p=sk.filter(k=>k<+r.km);if(p.length)x=`<span class="tag">سارت ${r.km-Math.max(...p)} كم منذ التفويلة السابقة</span>`}
-  if(sec==='parts')x=`<span class="tag">الإجمالي ${r.total}</span>`;
+  if(sec==='parts'){x=`<span class="tag">الإجمالي ${r.total}</span>`;if(r.next){const L=+r.next-curKm(car),first=rows.findIndex(y=>(y.type||'').trim().toLowerCase()===(r.type||'').trim().toLowerCase())===i;x+=` <span class="tag">القادم عند ${r.next} كم</span>`+(first?` <span class="tag ${L<=300?'r':''}">${L>0?'باقي '+L+' كم':'تجاوزت الموعد بـ'+(-L)+' كم'}</span>`:'')}}
   if(sec==='license'&&r.end){const d=dleft(r.end);x=`<span class="tag ${d<=30?'r':''}">${d>=0?'باقي '+d+' يوم':'منتهية'}</span>`}
   return `<div class="card row"><span>${s.f.map(([k,l])=>k==='photo'||!r[k]?'':`<b>${l}:</b> ${esc(r[k])}`).filter(Boolean).join(' · ')} ${x}${r.photo?`<br><img src="${r.photo}" style="max-width:160px;border-radius:8px">`:''}</span>${ro?'':`<span class="no">${sec==='license'?`<button class="b" data-a="edit:${r.id}">تعديل</button> `:''}<button class="b x" data-a="del:${i}">حذف</button></span>`}</div>`}).join('')}
 function ROUTE(a){const ro=RO(),cs=mine(),all=[];
@@ -234,7 +237,7 @@ async drv(f){if(RO())return msg(NA);try{await addDoc(collection(db,'users',me.id
 async add(f){if(RO())return msg(NA);const r={};for(const[k,v]of f.entries()){if(v instanceof File){if(v.size)r[k]=await shrink(v,700)}else if(v!=='')r[k]=v}
  if(editId){const id=editId;editId=null;try{await updateDoc(doc(db,'users',me.id,'recs',id),r)}catch(e){msg(fb(e))}return R()}
  if(sec==='its'){const pcs=r.pcs,pcm=r.pcm;delete r.pcs;delete r.pcm;const pr=+r.price||0,pc=pcs==='يدوي'?(+pcm||0):(+pcs||0),km=(+r.kmE||0)-(+r.kmS||0);if(km<=0)return msg('كيلو متر الوصول يجب أن يكون أكبر من كيلو متر البداية');r.pct=pc;r.due=n2(pr-pr*pc/100);r.kmT=n2(km);r.cpk=n2(r.due/km)}
- let tc=car;if(sec==='route'||sec==='its'){tc=r.car||car;delete r.car}if(sec==='parts')r.total=(+r.price||0)+(+r.labor||0);
+ let tc=car;if(sec==='route'||sec==='its'){tc=r.car||car;delete r.car}if(sec==='parts'){r.total=(+r.price||0)+(+r.labor||0);if(r.km&&r.valid)r.next=(+r.km)+(+r.valid)}
  try{await addDoc(collection(db,'users',me.id,'recs'),{...r,car:tc,sec,ts:Date.now()});if(sec==='its')ok('تمت إضافة الرحلة')}catch(e){msg(fb(e))}}};
 FS.forgot=async f=>{try{await sendPasswordResetEmail(auth,f.get('e').trim());ok('إذا كان الإيميل مسجلًا لدينا فقد أرسلنا رابط الاسترجاع. راجع صندوق الوارد ورسائل Spam')}catch(e){msg(fb(e))}};
 FS.chpw=async f=>{const n=f.get('n');if(n!==f.get('n2'))return msg('كلمتا السر الجديدتان غير متطابقتين');try{const u=auth.currentUser;await reauthenticateWithCredential(u,EmailAuthProvider.credential(u.email,f.get('o')));await updatePassword(u,n);ok('تم تغيير كلمة السر بنجاح')}catch(e){msg(e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'?'كلمة السر الحالية غير صحيحة':fb(e))}};
