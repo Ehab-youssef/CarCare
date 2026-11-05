@@ -40,6 +40,7 @@ button.b.x{background:#d33}button.b.sm{font-size:.75em;padding:7px 12px}
 header{background:#03010f;justify-content:center;padding:8px 12px}header .hb{display:flex;flex-direction:column;align-items:center;cursor:pointer}header img{height:auto;width:clamp(190px,30vw,380px);border-radius:0;mix-blend-mode:lighten;display:block}header .cn{width:clamp(150px,29vw,370px);margin-top:16px;filter:drop-shadow(0 0 6px rgba(7,162,196,.75));display:block}
 .adm{font-size:.75em}.adm h2{font-size:1.5em}.adm td,.adm th{font-size:.675rem;padding:4px}.adm button.b{font-size:.675rem;padding:4px 8px;margin:2px 1px}.adm .lk{font-size:.75rem}
 [hidden]{display:none!important}
+#msg:not(:empty){position:sticky;top:0;z-index:50;background:#fff;padding:8px 12px;border-radius:10px;box-shadow:0 2px 10px #0003;margin-bottom:8px}
 </style></head><body>
 <header><div class="hb" data-a="home"><img id="lg" alt="CarCare"></div></header>
 <main><div id="tb"></div><div id="msg"></div><div id="app"></div><div id="bb"></div></main>
@@ -234,9 +235,10 @@ async add(f){if(RO())return msg(NA);const r={};for(const[k,v]of f.entries()){if(
  if(editId){const id=editId;editId=null;try{await updateDoc(doc(db,'users',me.id,'recs',id),r)}catch(e){msg(fb(e))}return R()}
  if(sec==='its'){const pcs=r.pcs,pcm=r.pcm;delete r.pcs;delete r.pcm;const pr=+r.price||0,pc=pcs==='يدوي'?(+pcm||0):(+pcs||0),km=(+r.kmE||0)-(+r.kmS||0);if(km<=0)return msg('كيلو متر الوصول يجب أن يكون أكبر من كيلو متر البداية');r.pct=pc;r.due=n2(pr-pr*pc/100);r.kmT=n2(km);r.cpk=n2(r.due/km)}
  let tc=car;if(sec==='route'||sec==='its'){tc=r.car||car;delete r.car}if(sec==='parts')r.total=(+r.price||0)+(+r.labor||0);
- try{await addDoc(collection(db,'users',me.id,'recs'),{...r,car:tc,sec,ts:Date.now()})}catch(e){msg(fb(e))}}};
+ try{await addDoc(collection(db,'users',me.id,'recs'),{...r,car:tc,sec,ts:Date.now()});if(sec==='its')ok('تمت إضافة الرحلة')}catch(e){msg(fb(e))}}};
 FS.forgot=async f=>{try{await sendPasswordResetEmail(auth,f.get('e').trim());ok('إذا كان الإيميل مسجلًا لدينا فقد أرسلنا رابط الاسترجاع. راجع صندوق الوارد ورسائل Spam')}catch(e){msg(fb(e))}};
 FS.chpw=async f=>{const n=f.get('n');if(n!==f.get('n2'))return msg('كلمتا السر الجديدتان غير متطابقتين');try{const u=auth.currentUser;await reauthenticateWithCredential(u,EmailAuthProvider.credential(u.email,f.get('o')));await updatePassword(u,n);ok('تم تغيير كلمة السر بنجاح')}catch(e){msg(e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'?'كلمة السر الحالية غير صحيحة':fb(e))}};
+FS.its=FS.add;
 FS.adm=FS.login;
 document.addEventListener('submit',e=>{e.preventDefault();const f=FS[e.target.dataset.f];f&&f(new FormData(e.target))});
 document.addEventListener('change',async e=>{const t=e.target;
