@@ -42,6 +42,17 @@ header{background:#03010f;justify-content:center;padding:8px 12px}header .hb{dis
 [hidden]{display:none!important}
 #msg:not(:empty){position:sticky;top:0;z-index:50;background:#fff;padding:8px 12px;border-radius:10px;box-shadow:0 2px 10px #0003;margin-bottom:8px}
 .tag{white-space:nowrap;display:inline-block;margin:2px 0}
+.due{background:var(--card);border:1px solid var(--ln);border-radius:16px;padding:12px;margin-top:12px;box-shadow:0 4px 12px #0001}
+.dh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.dbg{background:#d11;color:#fff;border-radius:10px;padding:3px 10px;font-size:.75rem;font-weight:700}.dbg.gr{background:#1a9c4a}
+.dit{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--ln);cursor:pointer}
+.dit img{width:44px;height:44px;border-radius:50%;flex:none}.dbody{flex:1;min-width:0}
+.dtp{display:flex;justify-content:space-between;align-items:center;gap:6px}.dsb{font-size:.78rem;color:var(--mut);margin:2px 0 6px}
+.dch{font-size:.7rem;font-weight:700;border-radius:8px;padding:2px 8px;color:#fff;white-space:nowrap}.dch.r{background:#d11}.dch.o{background:#f0820f}.dch.g{background:#1a9c4a}
+.dpb{height:8px;background:#e6dede;border-radius:6px;overflow:hidden}.dpb i{display:block;height:100%;border-radius:6px}
+.dpb i.r{background:linear-gradient(to left,#ff6a5a,#d11)}.dpb i.o{background:linear-gradient(to left,#ffc36b,#f0820f)}.dpb i.g{background:linear-gradient(to left,#6fdc95,#1a9c4a)}
+.dall{text-align:center;color:#1a56d6;font-size:.8rem;font-weight:700;padding-top:8px;border-top:1px solid var(--ln);cursor:pointer}
+@media print{.due{box-shadow:none}}
 </style></head><body>
 <header><div class="hb" data-a="home"><img id="lg" alt="CarCare"></div></header>
 <main><div id="tb"></div><div id="msg"></div><div id="app"></div><div id="bb"></div></main>
@@ -125,8 +136,26 @@ function CARS(a){const cs=mine(),ro=RO(),left=me.plan==='trial'?Math.max(0,Math.
  return `<div class="card" style="cursor:pointer" data-a="car:${c.id}"><div class="row" style="margin:0;justify-content:flex-start">${lg(c)}<div><b style="color:var(--tx)">${esc(c.b)} ${esc(c.m)}</b> · ${esc(c.c)} ${oilWarn(c.id)||partsWarn(c.id)||licWarn(c.id)?'<span class="tag r">إشعار</span>':''}</div></div><div style="margin:10px 0;line-height:1.9">${L('fuel',r=>esc(r.amt)+' ج','آخر تفويلة')}${L('service',r=>esc(r.desc||r.shop||''),'آخر صيانة')}${L('parts',r=>esc(r.type),'آخر قطعة غيار')}${L('oil',r=>esc(r.cost||'')+' ج','آخر تغيير زيت')}</div>${ro?'':`<button class="b x" data-a="dcar:${c.id}">حذف السيارة</button>`}</div>`}).join('')}
  <div class="grid" style="max-width:190px;margin:24px auto 0"><button class="ic" data-a="agg"><img src="${IMG.agg}" alt="">مجمع</button></div>`;
  const bs=$('#bs');if(bs)bs.onchange=()=>{$('#ob').hidden=bs.value!=='أخرى'}}
+let dueAll=false;
+function dueItems(c){const k=curKm(c),out=[],ds=x=>Math.ceil((new Date(x)-new Date(T()))/DAY);
+ const S3=(red,orange,over)=>[red?'r':orange?'o':'g',over?'متأخر':red?'عاجل':orange?'قريبًا':'مطمئن',red?0:orange?1:2];
+ const kmc=(base,next)=>next>base?(k-base)/(next-base):1;
+ const dtx=d=>d<0?'انتهت منذ <b>'+(-d)+' يوم</b>':d<60?'باقي <b>'+d+' يوم</b>':'باقي <b>'+Math.round(d/30)+' شهر</b>';
+ const o=rec(c,'oil')[0];
+ if(o&&+o.next){const l=+o.next-k;out.push({sec:'oil',ic:'oil',t:'تغيير الزيت',sub:(l>0?'باقي <b>'+l+' كم</b>':'تجاوزت الموعد بـ <b>'+(-l)+' كم</b>')+' · التغيير عند '+o.next+' كم',con:kmc(+o.km||0,+o.next),s:S3(l<=300,l<=1000,l<=0)})}
+ const seen={};
+ rec(c,'parts').forEach(r=>{const t=(r.type||'').trim().toLowerCase();if(seen[t])return;seen[t]=1;const cand=[];
+  if(r.next){const l=+r.next-k;cand.push({sub:(l>0?'باقي <b>'+l+' كم</b>':'تجاوزت الموعد بـ <b>'+(-l)+' كم</b>')+' · التغيير عند '+r.next+' كم',con:kmc(+r.km||0,+r.next),s:S3(l<=300,l<=1000,l<=0)})}
+  if(r.dueDate){const d=ds(r.dueDate),tot=(new Date(r.dueDate)-new Date(r.date))/DAY,el=(new Date(T())-new Date(r.date))/DAY;cand.push({sub:dtx(d)+' · تنتهي '+dl(r.dueDate),con:tot>0?el/tot:1,s:S3(d<=30,d<=60,d<0)})}
+  if(cand.length){cand.sort((a,b)=>a.s[2]-b.s[2]||b.con-a.con);out.push({sec:'parts',ic:'parts',t:esc(r.type),...cand[0]})}});
+ const sk={};
+ rec(c,'license').forEach(r=>{if(sk[r.kind]||!r.end)return;sk[r.kind]=1;const d=ds(r.end),tot=r.start?(new Date(r.end)-new Date(r.start))/DAY:365,el=r.start?(new Date(T())-new Date(r.start))/DAY:365-d;
+  out.push({sec:'license',ic:'license',t:esc(r.kind),sub:dtx(d)+' · ينتهي '+dl(r.end),con:tot>0?el/tot:1,s:S3(d<=30,d<=60,d<0)})});
+ return out.sort((a,b)=>a.s[2]-b.s[2]||b.con-a.con)}
+function dueCard(c){const di=dueItems(c.id),att=di.filter(x=>x.s[2]<2).length,show=dueAll?di:di.slice(0,4);
+ return `<div class="due"><div class="dh"><b>⚡ المطلوب قريبًا</b>${di.length?`<span class="dbg ${att?'':'gr'}">${att?att+' تحتاج انتباهك':'كل شيء تمام ✓'}</span>`:''}</div>${show.map(x=>`<div class="dit" data-a="sec:${x.sec}"><img src="${IMG[x.ic]}" alt=""><div class="dbody"><div class="dtp"><b>${x.t}</b><span class="dch ${x.s[0]}">${x.s[1]}</span></div><div class="dsb">${x.sub}</div><div class="dpb"><i class="${x.s[0]}" style="width:${Math.max(3,Math.min(100,Math.round(x.con*100)))}%"></i></div></div></div>`).join('')||'<div class="dsb" style="padding:8px 0">لا توجد بنود مجدولة بعد. سجّل زيتًا أو قطعة غيار بصلاحية أو ترخيصًا وستظهر هنا.</div>'}${di.length>4?`<div class="dall" data-a="dueall">${dueAll?'عرض أقل ↑':'عرض كل البنود ('+di.length+') ←'}</div>`:''}</div>`}
 function CAR(a){const c=D.cars.find(x=>x.id===car);
- a.innerHTML=`<div class="card row"><div class="row" style="margin:0">${lg(c)}<h2 style="margin:0;font-size:1.125em">${esc(c.b)} ${esc(c.m)} · ${esc(c.c)}</h2></div><div><small>العداد: ${curKm(c.id)} كم</small>${RO()?'':' <label class="lk no" style="font-size:.75em">تغيير اللوجو<input type="file" accept="image/*" data-lg hidden></label>'}</div></div><div class="grid" style="margin-top:14px">${S.map(s=>`<button class="ic" data-a="sec:${s.id}">${badge(c.id,s.id)?'<span class="bd">!</span>':''}<img src="${IMG[s.id]}" alt="">${s.t}</button>`).join('')}<button class="ic" data-a="its"><img src="${IMG.its}" alt="">النقل الذكي</button></div>`}
+ a.innerHTML=`<div class="card row"><div class="row" style="margin:0">${lg(c)}<h2 style="margin:0;font-size:1.125em">${esc(c.b)} ${esc(c.m)} · ${esc(c.c)}</h2></div><div><small>العداد: ${curKm(c.id)} كم</small>${RO()?'':' <label class="lk no" style="font-size:.75em">تغيير اللوجو<input type="file" accept="image/*" data-lg hidden></label>'}</div></div>${dueCard(c)}<div class="grid" style="margin-top:14px">${S.map(s=>`<button class="ic" data-a="sec:${s.id}">${badge(c.id,s.id)?'<span class="bd">!</span>':''}<img src="${IMG[s.id]}" alt="">${s.t}</button>`).join('')}<button class="ic" data-a="its"><img src="${IMG.its}" alt="">النقل الذكي</button></div>`}
 function SEC(a){const c=D.cars.find(x=>x.id===car),s=S.find(x=>x.id===sec);
  if(sec==='its')return ITS(a);if(sec==='route')return ROUTE(a);if(sec==='cost')return COST(a,c);
  const rows=rec(car,sec),ro=RO(),ev=editId?(rows.find(r=>r.id===editId)||{}):{};
@@ -214,7 +243,7 @@ function A(a){if(adm==='no')return a.innerHTML='<div class="card">هذا الح�
  a.innerHTML=`<div class="adm"><h2>${cn?'الحسابات الملغاة':'إدارة الحسابات'}</h2><div><button class="lk" data-a="out">خروج</button> ${cn?'<button class="lk" data-a="admv:list">← الحسابات النشطة</button>':`<button class="lk" data-a="admv:canc">🗂️ الحسابات الملغاة (${nc})</button>`}</div><div class="card" style="overflow-x:auto"><table><tr><th>م</th><th>الاسم</th><th>الموبيل</th><th>النوع</th><th>الحالة</th><th>الإيميل</th></tr>${f.map((u,i)=>`<tr><td>${i+1}</td><td>${esc(u.fn+' '+u.ln)}</td><td dir="ltr">${esc(u.mob)}</td><td>${u.type==='co'?'شركة':'فردي'}</td><td>${stl(u)}${cn?'':`<br>حتى <span dir="ltr">${en(u)}</span>`}</td><td><span dir="ltr">${esc(u.email)}</span><br>${bt(u,'monthly','📅 شهري')}${bt(u,'yearly','🗓️ سنوي')}${cn?'':bt(u,'renew','🔄 تجديد')+bt(u,'cancelled','⛔ إلغاء','x')}</td></tr>`).join('')||'<tr><td colspan="6">لا توجد حسابات</td></tr>'}</table></div></div>`}
 const ACT={view(v){view=v;R()},out(){signOut(auth)},
  pay(){payv=true;cpw=false;agg=false;pp=null;R()},cpw(){cpw=true;payv=false;agg=false;R()},pp(v){pp=v;R()},car(v){car=v;sec=null;editId=null;agg=false;R()},
- sec(v){sec=v;editId=null;R()},its(){sec='its';editId=null;agg=false;R()},
+ sec(v){sec=v;editId=null;R()},its(){sec='its';editId=null;agg=false;R()},dueall(){dueAll=!dueAll;R()},
  back(){editId=null;if(agg)agg=false;else if(cpw)cpw=false;else if(payv)payv=false;else if(sec)sec=null;else car=null;R()},
  home(){editId=null;payv=false;cpw=false;agg=false;car=sec=null;if(!me)view='login';if(location.hash==='#admin')location.hash='';R()},
  print(){window.print()},edit(v){if(!confirm('تأكيد التعديل'))return;editId=v;R()},cancel(){editId=null;R()},
