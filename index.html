@@ -67,7 +67,7 @@ header{background:#03010f;justify-content:center;padding:8px 12px}header .hb{dis
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import{getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,sendPasswordResetEmail,updatePassword,reauthenticateWithCredential,EmailAuthProvider}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import{getFirestore,doc,setDoc,addDoc,deleteDoc,updateDoc,collection,onSnapshot,query,orderBy,serverTimestamp,Timestamp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import{getFirestore,doc,setDoc,addDoc,deleteDoc,updateDoc,collection,onSnapshot,query,orderBy,where,serverTimestamp,Timestamp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 // ====== ضع إعدادات مشروعك هنا (Firebase Console > Project settings > Your apps) ======
 const firebaseConfig={apiKey:"AIzaSyB7fltLuOCJftVeISCHUc1tYblV8N6gyoY",authDomain:"carcare-7eff5.firebaseapp.com",projectId:"carcare-7eff5",storageBucket:"carcare-7eff5.firebasestorage.app",messagingSenderId:"209472389799",appId:"1:209472389799:web:8f967e2c6b3609361f9182"};
 // UID حساب الأدمن (Authentication > Users) — يجب أن يطابق الموجود في firestore.rules
@@ -94,7 +94,7 @@ const S=[
 let me=null,car=null,sec=null,adm=false,view='login',pp=null,per='month',payv=false,editId=null,cpw=false,admv='list',agg=false;
 const rec=(c,s)=>((D.recs[c]||{})[s])||[];
 const mine=()=>D.cars.filter(c=>c.uid===me.id);
-const lim=()=>me.type==='co'?10:3;
+const lim=()=>me.type==='co'?10+(+me.extra||0):3;
 function st(u){const n=Date.now();if(u.plan==='cancelled')return'x';if(u.plan==='trial')return n<u.created+7*DAY?'t':'x';return n<u.until?'p':'x'}
 const stl=u=>({t:'تجريبي',p:u.plan==='yearly'?'مدفوع سنوي':'مدفوع شهري',x:u.plan==='cancelled'?'ملغي':'منتهي'}[st(u)]);
 function curKm(c){let m=0;rec(c,'fuel').concat(rec(c,'oil'),rec(c,'parts')).forEach(r=>m=Math.max(m,+r.km||0));rec(c,'route').forEach(r=>m=Math.max(m,+r.inn||0,+r.out||0));rec(c,'its').forEach(r=>m=Math.max(m,+r.kmE||0,+r.kmS||0));return m}
@@ -117,12 +117,14 @@ function TB(){const t=$('#tb');if(!me){t.innerHTML='';return}
  else if(me.plan!=='trial'&&d<=3)n='باقي '+(d<=1?'يوم واحد':d===2?'يومان':d+' أيام')+' على التفعيل';
  t.innerHTML=`<div class="tbr no">${pb?`<button class="pd" data-a="pay">${pb}</button>`:'<span></span>'}<span><button class="lk" data-a="cpw">تغيير كلمة السر</button><button class="lk" data-a="out">تسجيل خروج</button></span></div>${n?`<div class="al">${n}</div>`:''}`}
 function BB(){const b=$('#bb');if(!me){b.innerHTML='';return}
- b.innerHTML=`<div class="bbr no">${!car&&!payv&&!cpw&&!agg?'<span></span>':'<div><button class="b" data-a="back" title="رجوع خطوة" style="font-size:1.3em;line-height:1">↩︎</button> <button class="b sm" data-a="home">القائمة الرئيسية</button></div>'}${payv||cpw?'':'<button class="b" data-a="print">طباعة PDF</button>'}</div>`}
+ b.innerHTML=`<div class="bbr no">${!car&&!payv&&!cpw&&!agg&&!drvp?'<span></span>':'<div><button class="b" data-a="back" title="رجوع خطوة" style="font-size:1.3em;line-height:1">↩︎</button> <button class="b sm" data-a="home">القائمة الرئيسية</button></div>'}${payv||cpw?'':'<button class="b" data-a="print">طباعة PDF</button>'}</div>`}
 function R(){msg();const a=$('#app');
+ if(/^#d=/.test(location.hash)){dInit(location.hash.slice(3));return DV(a)}
  if(location.hash==='#admin'){adm=!(auth&&auth.currentUser)?'login':(auth.currentUser.uid===ADMIN_UID?'in':'no');$('#tb').innerHTML='';$('#bb').innerHTML='';$('#fb').innerHTML='';return A(a)}
  adm=false;
  if(!me){$('#tb').innerHTML='';$('#bb').innerHTML='';$('#fb').innerHTML='';return(auth&&auth.currentUser)?(a.innerHTML='<p>جاري التحميل...<br><button class="lk" data-a="out">خروج</button></p>'):(view==='signup'?SU(a):view==='forgot'?FG(a):LI(a))}
  TB();BB();FB();
+ if(drvp)return DRV(a);
  if(agg)return AG(a);
  if(cpw)return CP(a);
  if(payv)return PW(a);
@@ -132,13 +134,44 @@ function R(){msg();const a=$('#app');
 function FG(a){a.innerHTML=`<form class="one" data-f="forgot"><h2>استرجاع كلمة السر</h2><p>اكتب إيميلك وسنرسل لك رابطًا لتعيين كلمة سر جديدة</p><label>الإيميل<input name="e" type="email" required></label><button class="b">إرسال الرابط</button><button type="button" class="lk" data-a="view:login">رجوع لتسجيل الدخول</button></form>`}
 function CP(a){a.innerHTML=`<form class="one" data-f="chpw"><h2>تغيير كلمة السر</h2><label>كلمة السر الحالية<input name="o" type="password" required></label><label>كلمة السر الجديدة<input name="n" type="password" minlength="6" required></label><label>تأكيد كلمة السر الجديدة<input name="n2" type="password" minlength="6" required></label><button class="b">تغيير</button><small>نسيت الحالية؟ سجّل خروج واضغط "نسيت كلمة السر؟"</small></form>`}
 function LI(a){a.innerHTML=`<form class="one" data-f="login"><h2>تسجيل الدخول</h2><label>الإيميل<input name="e" type="email" required></label><label>كلمة السر<input name="p" type="password" required></label><button class="b">دخول</button><button type="button" class="lk" data-a="view:signup">تسجيل حساب جديد</button><button type="button" class="lk" data-a="view:forgot">نسيت كلمة السر؟</button></form>`}
-function SU(a){a.innerHTML=`<form class="one" data-f="su"><h2>حساب جديد (٧ أيام مجانًا)</h2><label>الاسم الأول<input name="fn" required></label><label>اللقب<input name="ln" required></label><label>الإيميل<input name="e" type="email" required></label><label>كلمة السر<input name="p" type="password" minlength="6" required></label><label>رقم الموبايل<input name="m" type="tel" required></label><label>نوع الحساب<select name="t"><option value="ind">عميل فردي (٣ سيارات)</option><option value="co">شركة (١٠ سيارات)</option></select></label><button class="b">تسجيل</button><button type="button" class="lk" data-a="view:login">عندي حساب</button></form>`}
-function PW(a){const pr=me.type==='co'?[50,500]:[30,300],amt=pp==='y'?pr[1]:pr[0];
+function SU(a){a.innerHTML=`<form class="one" data-f="su"><h2>حساب جديد (٧ أيام مجانًا)</h2><label>الاسم الأول<input name="fn" required></label><label>اللقب<input name="ln" required></label><label>الإيميل<input name="e" type="email" required></label><label>كلمة السر<input name="p" type="password" minlength="6" required></label><label>رقم الموبايل<input name="m" type="tel" required></label><label>نوع الحساب<select name="t"><option value="ind">عميل فردي (٣ سيارات)</option><option value="co">شركة (١٠ سيارات)</option></select></label><label id="cnl" hidden>اسم الشركة<input name="cn"></label><button class="b">تسجيل</button><button type="button" class="lk" data-a="view:login">عندي حساب</button></form>`}
+let drvp=false,xcars=false,xn='',lastLink=null,DK=null,DD=null,DH=[],dsec=null,dunsub=[];
+const SVS=['fuel','oil','service','parts'];
+const mkKey=()=>Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b=>b.toString(16).padStart(2,'0')).join('');
+const dlink=k=>location.origin+location.pathname+'#d='+k;
+const lbl=c=>c.b+' '+c.m+(c.c?' - '+c.c:'');
+const lmsg=(n,k)=>'السيد / '+n+'\nالرابط التالي مرسل لك لإضافة أي خدمات مدفوعة للسيارات:\n'+dlink(k);
+const dueOf=(d,m)=>{const x=new Date(d+'T00:00:00'),p=n=>String(n).padStart(2,'0');x.setMonth(x.getMonth()+(+m));return x.getFullYear()+'-'+p(x.getMonth()+1)+'-'+p(x.getDate())};
+function XC0(a){const y=me.plan==='yearly';a.innerHTML=`<div class="card" style="text-align:center"><h2>إضافة سيارات</h2><p>السيارة الإضافية: ${y?'٨٠ جنيه سنويًا':'١٠ جنيه شهريًا'}</p><label style="max-width:260px;margin:0 auto">عدد السيارات المطلوب<input type="number" min="1" step="1" data-xn value="${esc(xn)}"></label><div id="xcalc"></div></div>`;XC()}
+function XC(){const el=$('#xcalc');if(!el)return;const y=me.plan==='yearly',n=Math.floor(+xn)||0,u=y?80:10,amt=n*u;
+ const wa='https://wa.me/2'+PHONE+'?text='+encodeURIComponent('طلب إضافة '+n+' سيارة بمبلغ '+amt+' ج - '+me.email);
+ el.innerHTML=n>0?`<p style="margin-top:14px">السيارات الإضافية: <b>${n}</b> × ${u} = <b>${amt} جنيه</b></p><p>لتفعيل السيارات الإضافية برجاء تحويل مبلغ <b>${amt} جنيه</b> لفودافون كاش او انستاباي على الرقم <b dir="ltr">${PHONE}</b> وارسال رسالة واتس أب بصورة التحويل لنفس الرقم</p><a class="b" target="_blank" rel="noopener" href="${wa}">إرسال على واتساب</a>`:''}
+function PW(a){if(xcars)return XC0(a);const pr=me.type==='co'?[80,800]:[30,300],amt=pp==='y'?pr[1]:pr[0];
  const wa='https://wa.me/2'+PHONE+'?text='+encodeURIComponent('تم تحويل '+amt+' ج لتفعيل حساب CarCare - '+me.email);
  a.innerHTML=`<div class="card" style="text-align:center"><h2>${me.plan==='monthly'||me.plan==='yearly'?'تجديد الحساب':'تنشيط حساب مدفوع'}</h2><p>لتفعيل حسابك المدفوع اختار مدة الدفع</p><div class="grid" style="max-width:360px;margin:auto"><button class="ic ${pp==='m'?'sl':''}" data-a="pp:m"><span class="em">📅</span>شهري</button><button class="ic ${pp==='y'?'sl':''}" data-a="pp:y"><span class="em">🗓️</span>سنوي</button></div>${pp?`<p style="margin-top:16px">لتفعيل حسابك برجاء تحويل مبلغ <b>${amt}ج</b> لفودافون كاش او انستاباي على الرقم <b dir="ltr">${PHONE}</b> وارسال رسالة واتس أب بصورة التحويل لنفس الرقم</p><a class="b" target="_blank" rel="noopener" href="${wa}">إرسال على واتساب</a>`:''}</div>`}
+function DRV(a){const cs=mine(),L=D.drvs||[],names=[...new Set(L.map(x=>x.name).concat(D.drv[me.id]||[]))];
+ if(!me.company){a.innerHTML=`<form class="one" data-f="company"><h2>اسم الشركة</h2><p>اكتب اسم شركتك ليظهر للسائقين</p><label>اسم الشركة<input name="cn" required></label><button class="b">حفظ</button></form>`;return}
+ a.innerHTML=`<div style="text-align:center;margin:10px 0"><div style="font-size:1.7rem;font-weight:900">${esc(me.company)}</div><p>لإضافة بيانات الخدمات بمعرفة السائق</p></div><form data-f="drvlink"><label style="grid-column:1/-1">اسم السائق<input name="dn" list="dnl" required autocomplete="off"></label><datalist id="dnl">${names.map(n=>`<option value="${esc(n)}">`).join('')}</datalist><div style="grid-column:1/-1"><b>السيارات المسموح له بالإضافة</b><div class="vrow" style="flex-direction:column;gap:6px"><label class="ck"><input type="checkbox" data-allc> كل السيارات</label>${cs.map(c=>`<label class="ck"><input type="checkbox" name="cs" value="${c.id}"> ${esc(lbl(c))}</label>`).join('')||'<small>أضف سيارات أولًا</small>'}</div></div><button class="b" style="grid-column:1/-1">تجهيز لينك خاص بالسائق</button></form>
+ ${lastLink?`<div class="card"><textarea id="lmsg" readonly rows="6" style="width:100%;font:inherit;background:var(--bg);color:var(--tx);border:1px solid var(--ln);border-radius:8px;padding:8px;margin-bottom:8px">${esc(lastLink.msg)}</textarea><button class="b" data-a="copymsg">نسخ الرسالة</button></div>`:''}
+ <h3>السائقون المسجلون</h3>${L.map(x=>`<div class="card row"><span><b>${esc(x.name)}</b> · ${(x.carIds||[]).length} سيارة ${x.active?'':'<span class="tag r">موقوف</span>'}</span><span><button class="b" data-a="dl:${x.id}">🔗 الرابط</button> <button class="b" data-a="dtog:${x.id}">${x.active?'إيقاف':'تفعيل'}</button> <button class="b x" data-a="ddrop:${x.id}">حذف</button></span></div>`).join('')||'<p>لا يوجد سائقون بعد</p>'}`}
+function dInit(key){if(DK===key)return;dunsub.forEach(f=>f());dunsub=[];DK=key;DD=null;DH=[];dsec=null;if(!cfgOk){DD=false;return}
+ dunsub.push(onSnapshot(doc(db,'drivers',key),s=>{DD=s.exists()&&s.data().active?s.data():false;R()},()=>{DD=false;R()}));
+ dunsub.push(onSnapshot(collection(db,'drivers',key,'hist'),s=>{DH=s.docs.map(d=>({id:d.id,...d.data()})).sort((x,y)=>(y.sentTs||0)-(x.sentTs||0));R()},()=>{}))}
+const dget=()=>{try{return JSON.parse(localStorage.getItem('dr_'+DK)||'[]')}catch(e){return []}},dput=l=>{try{localStorage.setItem('dr_'+DK,JSON.stringify(l))}catch(e){}};
+const esum=e=>{const s=S.find(x=>x.id===e.sec);return `<b>${s.t}</b> · ${esc(e.cl||'')} · ${dl(e.date)}<br><small>${s.f.map(([k,l])=>e[k]&&k!=='date'?l+': '+esc(e[k]):'').filter(Boolean).join(' · ')}${e.total?' · الإجمالي: '+e.total:''}</small>`};
+function DV(a){$('#tb').innerHTML='';$('#bb').innerHTML='';$('#fb').innerHTML='';
+ if(DD===null)return a.innerHTML='<p style="text-align:center">جاري التحميل...</p>';
+ if(!DD)return a.innerHTML='<div class="card">هذا الرابط غير صالح أو تم إيقافه. تواصل مع المسئول في الشركة.</div>';
+ if(dsec)return DF(a);
+ const dr=dget();
+ a.innerHTML=`<div style="text-align:center;margin:8px 0"><div style="font-size:1.6rem;font-weight:900">${esc(DD.company||'')}</div><h2>مرحبًا ${esc(DD.name)} 👋</h2><p>اختر الخدمة لإضافتها</p></div><div class="grid g3" style="grid-template-columns:repeat(4,1fr)">${SVS.map(s=>`<button class="ic" data-a="dsec:${s}"><img src="${IMG[s]}" alt="">${S.find(x=>x.id===s).t}</button>`).join('')}</div>${dr.length?'<h3>إضافات لم تُرسل بعد</h3>'+dr.map(e=>`<div class="card">${esum(e)}<div class="row"><button class="b" data-a="dsend:${e.id}">إرسال</button><button class="b x" data-a="ddel:${e.id}">حذف</button></div></div>`).join(''):''}${DH.length?'<h3>الإضافات المرسلة</h3>'+DH.map(e=>`<div class="card">${esum(e)}<span class="tag">تم الإرسال</span></div>`).join(''):''}`}
+function DF(a){const s=S.find(x=>x.id===dsec),cs=DD.cars||[];
+ const fld=s.f.filter(([k])=>!(dsec==='parts'&&['km','valid','months'].includes(k))).map(([k,l,t])=>`<label>${l}<input name="${k}" type="${t}" value="${t==='date'?T():''}" ${t==='number'?'step="any" min="0"':''} ${k==='next'||k==='labor'?'':'required'}></label>`).join('');
+ const pv=`<div style="grid-column:1/-1"><b>هل القطعة لها صلاحية؟</b><div class="vrow"><label class="ck"><input type="checkbox" data-vc="k" data-ck=""> عدد كيلو متر</label><label class="ck"><input type="checkbox" data-vc="m"> فترة زمنية</label></div></div><div class="vb" id="vkb" hidden><label>كيلو متر التغيير<input name="km" type="number" step="any" min="0"></label><label>صالحة لـ (كم)<input name="valid" type="number" step="any" min="0"></label></div><div class="vb" id="vmb" hidden><label>صالحة لـ (شهر)<input name="months" type="number" step="any" min="0"></label></div>`;
+ a.innerHTML=`<div class="shd"><img src="${IMG[dsec]}" alt=""><div>${s.t}</div></div><form data-f="dsave"><label>السيارة<select name="car" required>${cs.map(c=>`<option value="${c.id}">${esc(c.label)}</option>`).join('')}</select></label>${fld}${dsec==='parts'?pv:''}<button class="b">حفظ</button><button type="button" class="lk" data-a="dback">رجوع</button></form>`}
 function CARS(a){const cs=mine(),ro=RO(),left=me.plan==='trial'?Math.max(0,Math.ceil((me.created+7*DAY-Date.now())/DAY)):0;
- a.innerHTML=`<div style="text-align:center;margin:4vh 0 10px"><h2>مرحبًا ${esc(me.fn)} ${esc(me.ln)} 👋</h2>${left&&!ro?`<div class="card">الفترة المجانية: باقي ${left} يوم</div>`:''}<div class="grid" style="max-width:190px;margin:14px auto 0"><div class="ic"><img src="${LOGO}" alt="">عربيتي (${cs.length}/${lim()})</div></div></div>
- ${ro?'':cs.length<lim()?`<form data-f="car"><label>نوع السيارة<select name="b" id="bs">${BR.map(b=>`<option>${b}</option>`).join('')}</select></label><label id="ob" hidden>اكتب النوع<input name="o"></label><label>الموديل<input name="m" required></label><label>اللون<input name="c" required></label><button class="b">إضافة سيارة</button></form>`:'<div class="card">وصلت للحد الأقصى من السيارات.</div>'}
+ a.innerHTML=`<div style="text-align:center;margin:4vh 0 10px"><h2>مرحبًا ${esc(me.fn)} ${esc(me.ln)} 👋</h2>${left&&!ro?`<div class="card">الفترة المجانية: باقي ${left} يوم</div>`:''}<div class="grid" style="max-width:190px;margin:14px auto 0"><div class="ic"><img src="${LOGO}" alt="">عربيتي (${cs.length}/${lim()})</div></div>${me.type==='co'&&!ro?'<div style="margin-top:10px"><button class="b" data-a="drvp">الإضافة بمعرفة السائق</button></div>':''}</div>
+ ${ro?'':cs.length<lim()?`<form data-f="car"><label>نوع السيارة<select name="b" id="bs">${BR.map(b=>`<option>${b}</option>`).join('')}</select></label><label id="ob" hidden>اكتب النوع<input name="o"></label><label>الموديل<input name="m" required></label><label>اللون<input name="c" required></label><button class="b">إضافة سيارة</button></form>`:`<div class="card" style="text-align:center"><b>وصلت للحد الأقصى</b>${me.type==='co'&&st(me)==='p'&&(me.plan==='monthly'||me.plan==='yearly')?'<p>هل ترغب في إضافة سيارات أخرى</p><label class="ck" style="justify-content:center"><input type="checkbox" data-xc> نعم</label>':''}</div>`}
  ${cs.map(c=>{const L=(s,k,l)=>{const r=rec(c.id,s)[0];return `<div>${l} = ${r?k(r):'—'}${r?' بتاريخ '+dl(r.date):''}</div>`};
  return `<div class="card" style="cursor:pointer" data-a="car:${c.id}"><div class="row" style="margin:0;justify-content:flex-start">${lg(c)}<div><b style="color:var(--tx)">${esc(c.b)} ${esc(c.m)}</b> · ${esc(c.c)} ${oilWarn(c.id)||partsWarn(c.id)||licWarn(c.id)?'<span class="tag r">إشعار</span>':''}</div></div><div style="margin:10px 0;line-height:1.9">${L('fuel',r=>esc(r.amt)+' ج','آخر تفويلة')}${L('service',r=>esc(r.desc||r.shop||''),'آخر صيانة')}${L('parts',r=>esc(r.type),'آخر قطعة غيار')}${L('oil',r=>esc(r.cost||'')+' ج','آخر تغيير زيت')}</div>${ro?'':`<button class="b x" data-a="dcar:${c.id}">حذف السيارة</button>`}</div>`}).join('')}
  <div class="grid" style="max-width:190px;margin:24px auto 0"><button class="ic" data-a="agg"><img src="${IMG.agg}" alt="">مجمع</button></div>`;
@@ -159,7 +192,7 @@ function dueItems(c){const k=curKm(c),out=[],ds=x=>Math.ceil((new Date(x)-new Da
  return out.sort((a,b)=>a.s[2]-b.s[2]||b.con-a.con)}
 function dueCard(c){const di=dueItems(c.id),att=di.filter(x=>x.s[2]<2).length,show=dueAll?di:di.slice(0,4);
  return `<div class="due"><div class="dh"><b>⚡ المطلوب قريبًا</b>${di.length?`<span class="dbg ${att?'':'gr'}">${att?att+' تحتاج انتباهك':'كل شيء تمام ✓'}</span>`:''}</div>${show.map(x=>`<div class="dit" data-a="sec:${x.sec}"><img src="${IMG[x.ic]}" alt=""><div class="dbody"><div class="dtp"><b>${x.t}</b><span class="dch ${x.s[0]}">${x.s[1]}</span></div><div class="dsb">${x.sub}</div><div class="dpb"><i class="${x.s[0]}" style="width:${Math.max(3,Math.min(100,Math.round(x.con*100)))}%"></i></div>${x.sec==='parts'&&!RO()&&x.s[2]<2?`<button class="dbtn" data-a="repl:${x.id}">🔁 تم تغييرها</button>`:''}</div></div>`).join('')||'<div class="dsb" style="padding:8px 0">لا توجد بنود مجدولة بعد. سجّل زيتًا أو قطعة غيار بصلاحية أو ترخيصًا وستظهر هنا.</div>'}${di.length>4?`<div class="dall" data-a="dueall">${dueAll?'عرض أقل ↑':'عرض كل البنود ('+di.length+') ←'}</div>`:''}</div>`}
-function FB(){const f=$('#fb');if(!f)return;const c=car&&!sec&&!payv&&!cpw&&!agg?D.cars.find(x=>x.id===car):null;f.innerHTML=c?dueCard(c):''}
+function FB(){const f=$('#fb');if(!f)return;const c=car&&!sec&&!payv&&!cpw&&!agg&&!drvp?D.cars.find(x=>x.id===car):null;f.innerHTML=c?dueCard(c):''}
 const carHead=c=>c?`<div class="chd">${lg(c)}<div><b>${esc(c.b)} ${esc(c.m)}</b> · ${esc(c.c)}</div></div>`:'';
 const secHead=(i,t)=>`<div class="shd"><img src="${i}" alt=""><div>${t}</div></div>`;
 function pValid(){const old=replId?activeParts(car).find(x=>x.id===replId):null,vk=!!(old&&old.next),vm=!!(old&&old.dueDate),ck=curKm(car)||'';
@@ -178,13 +211,13 @@ function SEC(a){const c=D.cars.find(x=>x.id===car),s=S.find(x=>x.id===sec);
  if(sec==='parts'){const w=partsDue(car);if(w.length)top='<div class="card"><span class="tag r">تنبيه</span> '+w.map(x=>esc(x.type)+' ('+[x.kmW?(x.left>0?'باقي '+x.left+' كم':'تجاوزت الموعد بـ'+(-x.left)+' كم'):'',x.dayW?(x.days>=0?'باقي '+x.days+' يوم':'انتهت صلاحيتها'):''].filter(Boolean).join(' / ')+')').join(' · ')+'</div>'}
  const sk=rows.filter(r=>r.km).map(r=>+r.km);
  a.innerHTML=`${carHead(c)}${secHead(IMG[s.id],s.t)}${top}${ro?'':`<form data-f="add">${sec==='parts'&&!editId?replSel(car):''}${fld}${sec==='parts'&&!editId?pValid():''}<button class="b">${editId?'حفظ التعديل':'إضافة'}</button>${editId?'<button type="button" class="lk" data-a="cancel">إلغاء التعديل</button>':''}</form>`}`+
- rows.map((r,i)=>{let x='';
+ rows.map((r,i)=>{let x='';const w=me.type==='co'&&SVS.includes(sec)?(r.addedBy==='driver'?'<span class="tag" style="background:#ffd21f">بمعرفة السائق: '+esc(r.drvName||'')+'</span> ':'<span class="tag">بمعرفة المسئول</span> '):'';
   if(sec==='fuel'){const p=sk.filter(k=>k<+r.km);if(p.length)x=`<span class="tag">سارت ${r.km-Math.max(...p)} كم منذ التفويلة السابقة</span>`}
   if(sec==='parts'){x=`<span class="tag">الإجمالي ${r.total}</span>`;const first=activeParts(car).some(y=>y.id===r.id);if(rows.some(y=>y.replaces===r.id))x+=' <span class="tag">تم استبدالها ✓</span>';
    if(r.next){const L=+r.next-curKm(car);x+=` <span class="tag">القادم عند ${r.next} كم</span>`+(first?` <span class="tag ${L<=300?'r':''}">${L>0?'باقي '+L+' كم':'تجاوزت الموعد بـ'+(-L)+' كم'}</span>`:'')}
    if(r.dueDate){const D2=dleft(r.dueDate);x+=` <span class="tag">تنتهي بتاريخ ${dl(r.dueDate)}</span>`+(first?` <span class="tag ${D2<=30?'r':''}">${D2>=0?'باقي '+D2+' يوم':'انتهت صلاحيتها'}</span>`:'')}}
   if(sec==='license'&&r.end){const d=dleft(r.end);x=`<span class="tag ${d<=30?'r':''}">${d>=0?'باقي '+d+' يوم':'منتهية'}</span>`}
-  return `<div class="card row"><span>${s.f.map(([k,l])=>k==='photo'||!r[k]?'':`<b>${l}:</b> ${esc(r[k])}`).filter(Boolean).join(' · ')} ${x}${r.photo?`<br><img src="${r.photo}" style="max-width:160px;border-radius:8px">`:''}</span>${ro?'':`<span class="no">${sec==='license'?`<button class="b" data-a="edit:${r.id}">تعديل</button> `:''}<button class="b x" data-a="del:${i}">حذف</button></span>`}</div>`}).join('')}
+  return `<div class="card row"><span>${s.f.map(([k,l])=>k==='photo'||!r[k]?'':`<b>${l}:</b> ${esc(r[k])}`).filter(Boolean).join(' · ')} ${w}${x}${r.photo?`<br><img src="${r.photo}" style="max-width:160px;border-radius:8px">`:''}</span>${ro?'':`<span class="no">${sec==='license'?`<button class="b" data-a="edit:${r.id}">تعديل</button> `:''}<button class="b x" data-a="del:${i}">حذف</button></span>`}</div>`}).join('')}
 function ROUTE(a){const ro=RO(),cs=mine(),all=[];
  cs.forEach(c=>rec(c.id,'route').forEach(r=>all.push({...r,cid:c.id,cn:c.b+' '+c.m,d:r.date||new Date(r.ts||0).toISOString().slice(0,10)})));
  const td=T(),pf=RA.per==='day'?td:RA.per==='week'?new Date(Date.now()-6*DAY).toISOString().slice(0,10):RA.per==='month'?td.slice(0,7)+'-01':RA.per==='rng'?(RA.from||'0000'):'0000',pt=RA.per==='day'||RA.per==='week'?td:RA.per==='month'?td.slice(0,7)+'-31':RA.per==='rng'?(RA.to||'9999'):'9999';
@@ -217,9 +250,9 @@ const lastKm=cid=>{const l=rec(cid,'its')[0];return l&&l.kmE?l.kmE:(curKm(cid)||
 function itsCalc(){const f=document.querySelector('form[data-f="its"]');if(!f)return;const g=n=>+((f.elements[n]||{}).value)||0;
  const s=f.elements.pcs.value,pc=s==='يدوي'?g('pcm'):+s,pr=g('price'),due=pr-pr*pc/100,km=g('kmE')-g('kmS');
  $('#o_due').value=pr?due.toFixed(2):'';$('#o_km').value=km>0?km.toFixed(2):'';$('#o_cpk').value=km>0&&pr?(due/km).toFixed(2):''}
-let AGF={t:'service',p:'month',from:'',to:'',car:'all'};
+let AGF={t:'service',p:'month',from:'',to:'',car:'all',by:'all'};
 function AG(a){const cs=mine(),[from,to]=PR(AGF.p,AGF.from,AGF.to);
- const ok=r=>(!from||r.date>=from)&&(!to||r.date<=to),get=(c,s)=>rec(c.id,s).filter(ok),sm=(L,s,k)=>n2(L.reduce((t,c)=>t+get(c,s).reduce((x,r)=>x+(+r[k]||0),0),0));
+ const ok=r=>(!from||r.date>=from)&&(!to||r.date<=to),byok=r=>AGF.by==='all'||(AGF.by==='manager'?r.addedBy!=='driver':r.addedBy==='driver'&&r.drvName===AGF.by.slice(2)),get=(c,s)=>rec(c.id,s).filter(r=>ok(r)&&(s==='its'||byok(r))),sm=(L,s,k)=>n2(L.reduce((t,c)=>t+get(c,s).reduce((x,r)=>x+(+r[k]||0),0),0));
  const CF={service:[['date','التاريخ'],['shop','الورشة'],['desc','الوصف'],['cost','التكلفة']],parts:[['date','التاريخ'],['type','القطعة'],['price','السعر'],['labor','المصنعية'],['total','الإجمالي']],fuel:[['date','التاريخ'],['amt','المبلغ'],['km','كم']],oil:[['date','التاريخ'],['cost','التكلفة'],['km','كم'],['next','التغيير القادم']]};
  const TK={service:'cost',parts:'total',fuel:'amt',oil:'cost'},TN={service:'صيانة',parts:'قطع غيار',fuel:'بنزين',oil:'تغيير زيت',its:'النقل الذكي',all:'شامل الكل'};let body;
  if(AGF.t==='its'){const scs=AGF.car==='all'?cs:cs.filter(c=>c.id===AGF.car);
@@ -228,10 +261,11 @@ function AG(a){const cs=mine(),[from,to]=PR(AGF.p,AGF.from,AGF.to);
   body=scs.map(c=>blk('سيارة: '+esc(c.b+' '+c.m),[c])).join('<br>')+(scs.length>1?'<br>'+blk('الإجمالي العام لجميع السيارات',scs):'')||'لا توجد سيارات'}
  else if(AGF.t==='all'){const ss=['fuel','oil','service','parts'],tot=[0,0,0,0];
   body=`<table><tr><th>السيارة</th>${ss.map(s=>`<th>${TN[s]}</th>`).join('')}<th>الإجمالي</th></tr>`+cs.map(c=>{const v=ss.map(s=>sm([c],s,TK[s]));v.forEach((x,i)=>tot[i]+=x);return `<tr><td>${esc(c.b+' '+c.m)}</td>${v.map(x=>`<td>${x}</td>`).join('')}<td><b>${n2(v.reduce((x,y)=>x+y,0))}</b></td></tr>`}).join('')+`<tr><th>الإجمالي</th>${tot.map(x=>`<th>${n2(x)}</th>`).join('')}<th>${n2(tot.reduce((x,y)=>x+y,0))} ج.م</th></tr></table>`}
- else{const s=AGF.t,cols=CF[s],rows=[];cs.forEach(c=>get(c,s).forEach(r=>rows.push({...r,cn:c.b+' '+c.m})));rows.sort((x,y)=>(y.date||'')<(x.date||'')?-1:1);const tot=n2(rows.reduce((t,r)=>t+(+r[TK[s]]||0),0));
-  body=`<table><tr><th>السيارة</th>${cols.map(([k,l])=>`<th>${l}</th>`).join('')}</tr>${rows.map(r=>`<tr><td>${esc(r.cn)}</td>${cols.map(([k])=>`<td>${esc(r[k])}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${cols.length+1}">لا توجد بيانات في هذه الفترة</td></tr>`}<tr><th colspan="${cols.length+1}">الإجمالي: ${tot} ج.م</th></tr></table>`}
+ else{const s=AGF.t,cols=CF[s].concat(me.type==='co'?[['addedBy','بمعرفة']]:[]),rows=[];cs.forEach(c=>get(c,s).forEach(r=>rows.push({...r,cn:c.b+' '+c.m})));rows.sort((x,y)=>(y.date||'')<(x.date||'')?-1:1);const tot=n2(rows.reduce((t,r)=>t+(+r[TK[s]]||0),0));
+  body=`<table><tr><th>السيارة</th>${cols.map(([k,l])=>`<th>${l}</th>`).join('')}</tr>${rows.map(r=>`<tr><td>${esc(r.cn)}</td>${cols.map(([k])=>`<td>${k==='addedBy'?(r.addedBy==='driver'?'السائق '+esc(r.drvName):'المسئول'):esc(r[k])}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${cols.length+1}">لا توجد بيانات في هذه الفترة</td></tr>`}<tr><th colspan="${cols.length+1}">الإجمالي: ${tot} ج.م</th></tr></table>`}
+ const dn=[...new Set(cs.flatMap(c=>SVS.flatMap(s=>rec(c.id,s)).filter(r=>r.addedBy==='driver').map(r=>r.drvName)))],byLbl=`<label>بمعرفة<select data-ag="by"><option value="all">الكل</option><option value="manager" ${AGF.by==='manager'?'selected':''}>المسئول</option>${dn.map(n=>`<option value="d:${esc(n)}" ${AGF.by==='d:'+n?'selected':''}>السائق: ${esc(n)}</option>`).join('')}</select></label>`;
  const sl=(k,L)=>`<select data-ag="${k}">${L.map(([v,l])=>`<option value="${v}" ${AGF[k]===v?'selected':''}>${l}</option>`).join('')}</select>`;
- a.innerHTML=`<div style="text-align:center;margin:2vh 0 8px"><div class="grid" style="max-width:190px;margin:0 auto"><div class="ic"><img src="${IMG.agg}" alt="">مجمع</div></div><p>تعرض الصفحة تقارير عن جميع السيارات المسجلة</p></div><form class="no"><label>نوع التقرير${sl('t',[['service','صيانة'],['parts','قطع غيار'],['fuel','بنزين'],['oil','تغيير زيت'],['its','النقل الذكي'],['all','شامل الكل']])}</label>${AGF.t==='its'?`<label>السيارة<select data-ag="car"><option value="all">كل السيارات</option>${cs.map(c=>`<option value="${c.id}" ${AGF.car===c.id?'selected':''}>${esc(c.b+' '+c.m)}</option>`).join('')}</select></label>`:''}<label>الفترة${sl('p',[['day','يوم'],['week','أسبوع'],['month','شهر'],['year','سنة'],['rng','فترة محددة']])}</label>${AGF.p==='rng'?`<label>من<input type="date" data-ag="from" value="${AGF.from}"></label><label>إلى<input type="date" data-ag="to" value="${AGF.to}"></label>`:''}</form><div class="card" style="overflow-x:auto"><h3 style="margin-top:0">تقرير ${TN[AGF.t]}${from||to?` — من ${dl(from||'...')} إلى ${dl(to||'...')}`:''}</h3>${body}</div>`}
+ a.innerHTML=`<div style="text-align:center;margin:2vh 0 8px"><div class="grid" style="max-width:190px;margin:0 auto"><div class="ic"><img src="${IMG.agg}" alt="">مجمع</div></div><p>تعرض الصفحة تقارير عن جميع السيارات المسجلة</p></div><form class="no"><label>نوع التقرير${sl('t',[['service','صيانة'],['parts','قطع غيار'],['fuel','بنزين'],['oil','تغيير زيت'],['its','النقل الذكي'],['all','شامل الكل']])}</label>${me.type==='co'&&AGF.t!=='its'?byLbl:''}${AGF.t==='its'?`<label>السيارة<select data-ag="car"><option value="all">كل السيارات</option>${cs.map(c=>`<option value="${c.id}" ${AGF.car===c.id?'selected':''}>${esc(c.b+' '+c.m)}</option>`).join('')}</select></label>`:''}<label>الفترة${sl('p',[['day','يوم'],['week','أسبوع'],['month','شهر'],['year','سنة'],['rng','فترة محددة']])}</label>${AGF.p==='rng'?`<label>من<input type="date" data-ag="from" value="${AGF.from}"></label><label>إلى<input type="date" data-ag="to" value="${AGF.to}"></label>`:''}</form><div class="card" style="overflow-x:auto"><h3 style="margin-top:0">تقرير ${TN[AGF.t]}${from||to?` — من ${dl(from||'...')} إلى ${dl(to||'...')}`:''}</h3>${body}</div>`}
 let IF={car:'all',p:'month',from:'',to:''};
 function ITS(a){const ro=RO(),cs=mine();
  const f=ro?'':`<form data-f="its"><label>السيارة<select name="car" data-oi>${cs.map(c=>`<option value="${c.id}" ${c.id===car?'selected':''}>${esc(c.b+' '+c.m)}</option>`).join('')}</select></label><label>التاريخ<input name="date" type="date" value="${T()}" required></label><label>الشركة<input name="company" required></label><label>نقطة البداية<input name="from" required></label><label>نقطة الوصول<input name="to" required></label><label>كيلو متر البداية<input name="kmS" type="number" step="any" min="0" value="${lastKm(car)}" required></label><label>كيلو متر الوصول<input name="kmE" type="number" step="any" min="0" required></label><label>سعر الرحلة<input name="price" type="number" step="any" min="0" required></label><label>نسبة الشركة %<select name="pcs">${[5,10,20,30,40].map(x=>`<option>${x}</option>`).join('')}<option>يدوي</option></select></label><label id="pcm" hidden>النسبة يدويًا %<input name="pcm" type="number" step="any" min="0" max="100"></label><label>المستحق للسيارة<input id="o_due" readonly></label><label>كيلو متر الرحلة<input id="o_km" readonly></label><label>تكلفة الكيلو للرحلة<input id="o_cpk" readonly></label><button class="b">إضافة رحلة</button></form>`;
@@ -249,13 +283,13 @@ function ITSR(){const el=$('#itsr');if(!el)return;const ro=RO(),cs=mine(),all=[]
 function A(a){if(adm==='no')return a.innerHTML='<div class="card">هذا الحساب غير مصرح له بلوحة الأدمن. <button class="lk" data-a="out">خروج</button></div>';if(adm==='login')return a.innerHTML=`<form class="one" data-f="adm"><h2>دخول الأدمن</h2><label>الإيميل<input name="e" type="email" required></label><label>كلمة السر<input name="p" type="password" required></label><button class="b">دخول</button></form>`;
  const cn=admv==='canc',f=D.users.filter(u=>(u.plan==='cancelled')===cn),nc=D.users.filter(u=>u.plan==='cancelled').length;
  const en=u=>{const t=u.plan==='trial'?u.created+7*DAY:u.until;return t?new Date(t).toISOString().slice(0,10):''};
- const bt=(u,p,l,x='')=>`<button class="b ${x}" data-a="adm:${u.id}:${p}">${l}</button>`;
- a.innerHTML=`<div class="adm"><h2>${cn?'الحسابات الملغاة':'إدارة الحسابات'}</h2><div><button class="lk" data-a="out">خروج</button> ${cn?'<button class="lk" data-a="admv:list">← الحسابات النشطة</button>':`<button class="lk" data-a="admv:canc">🗂️ الحسابات الملغاة (${nc})</button>`}</div><div class="card" style="overflow-x:auto"><table><tr><th>م</th><th>الاسم</th><th>الموبيل</th><th>النوع</th><th>الحالة</th><th>الإيميل</th></tr>${f.map((u,i)=>`<tr><td>${i+1}</td><td>${esc(u.fn+' '+u.ln)}</td><td dir="ltr">${esc(u.mob)}</td><td>${u.type==='co'?'شركة':'فردي'}</td><td>${stl(u)}${cn?'':`<br>حتى <span dir="ltr">${en(u)}</span>`}</td><td><span dir="ltr">${esc(u.email)}</span><br>${bt(u,'monthly','📅 شهري')}${bt(u,'yearly','🗓️ سنوي')}${cn?'':bt(u,'renew','🔄 تجديد')+bt(u,'cancelled','⛔ إلغاء','x')}</td></tr>`).join('')||'<tr><td colspan="6">لا توجد حسابات</td></tr>'}</table></div></div>`}
+ const val=u=>{const y=u.plan==='yearly',pd=u.plan==='monthly'||y,v=!pd?0:u.type==='co'?(y?800:80)+(+u.extra||0)*(y?80:10):(y?300:30);return (v?v+' ج.م':'—')+(u.type==='co'?'<br>تم إضافة عدد سيارات: <b>'+(+u.extra||0)+'</b>':'')};const bt=(u,p,l,x='')=>`<button class="b ${x}" data-a="adm:${u.id}:${p}">${l}</button>`;
+ a.innerHTML=`<div class="adm"><h2>${cn?'الحسابات الملغاة':'إدارة الحسابات'}</h2><div><button class="lk" data-a="out">خروج</button> ${cn?'<button class="lk" data-a="admv:list">← الحسابات النشطة</button>':`<button class="lk" data-a="admv:canc">🗂️ الحسابات الملغاة (${nc})</button>`}</div><div class="card" style="overflow-x:auto"><table><tr><th>م</th><th>الاسم</th><th>الموبيل</th><th>النوع</th><th>الحالة</th><th>قيمة الخدمة</th><th>الإيميل</th></tr>${f.map((u,i)=>`<tr><td>${i+1}</td><td>${esc(u.fn+' '+u.ln)}</td><td dir="ltr">${esc(u.mob)}</td><td>${u.type==='co'?'شركة':'فردي'}</td><td>${stl(u)}${cn?'':`<br>حتى <span dir="ltr">${en(u)}</span>`}</td><td>${val(u)}</td><td><span dir="ltr">${esc(u.email)}</span><br>${bt(u,'monthly','📅 شهري')}${bt(u,'yearly','🗓️ سنوي')}${cn?'':bt(u,'renew','🔄 تجديد')+(u.type==='co'?`<button class="b" data-a="addcars:${u.id}">🚗 إضافة سيارات</button>`:'')+bt(u,'cancelled','⛔ إلغاء','x')}</td></tr>`).join('')||'<tr><td colspan="7">لا توجد حسابات</td></tr>'}</table></div></div>`}
 const ACT={view(v){view=v;R()},out(){signOut(auth)},
- pay(){payv=true;cpw=false;agg=false;pp=null;R()},cpw(){cpw=true;payv=false;agg=false;R()},pp(v){pp=v;R()},car(v){car=v;sec=null;editId=null;agg=false;R()},
+ pay(){payv=true;cpw=false;agg=false;drvp=false;xcars=false;pp=null;R()},cpw(){cpw=true;payv=false;agg=false;drvp=false;R()},xc(){payv=true;xcars=true;xn='';cpw=false;agg=false;drvp=false;R()},pp(v){pp=v;R()},car(v){car=v;sec=null;editId=null;agg=false;drvp=false;R()},
  sec(v){sec=v;editId=null;replId=null;R()},repl(v){replId=v;sec='parts';editId=null;R()},its(){sec='its';editId=null;agg=false;R()},dueall(){dueAll=!dueAll;R()},
- back(){editId=null;replId=null;if(agg)agg=false;else if(cpw)cpw=false;else if(payv)payv=false;else if(sec)sec=null;else car=null;R()},
- home(){editId=null;replId=null;payv=false;cpw=false;agg=false;car=sec=null;if(!me)view='login';if(location.hash==='#admin')location.hash='';R()},
+ back(){editId=null;replId=null;xcars=false;if(drvp)drvp=false;else if(agg)agg=false;else if(cpw)cpw=false;else if(payv)payv=false;else if(sec)sec=null;else car=null;R()},
+ home(){editId=null;replId=null;payv=false;cpw=false;agg=false;drvp=false;xcars=false;dsec=null;car=sec=null;if(!me)view='login';if(location.hash==='#admin')location.hash='';R()},
  print(){window.print()},edit(v){if(!confirm('تأكيد التعديل'))return;editId=v;R()},cancel(){editId=null;R()},
  rsearch(){RA={by:RF.by,val:RF.val,per:RF.per,from:RF.from,to:RF.to};R()},
  rs(k){RF.dir=RF.sort===k?-RF.dir:1;RF.sort=k;R()},
@@ -266,27 +300,50 @@ const ACT={view(v){view=v;R()},out(){signOut(auth)},
  if(p==='renew'){if(!cu||(cu.plan!=='monthly'&&cu.plan!=='yearly'))return msg('التجديد للحسابات المدفوعة فقط');x={until:Timestamp.fromMillis(Math.max(Date.now(),cu.until||0)+(cu.plan==='yearly'?365:30)*DAY)}}
  else if(p==='monthly')x.until=Timestamp.fromMillis(Date.now()+30*DAY);else if(p==='yearly')x.until=Timestamp.fromMillis(Date.now()+365*DAY);
  try{await updateDoc(doc(db,'users',u),x)}catch(e){msg(fb(e))}},
- admv(v){admv=v;R()},agg(){agg=true;payv=false;cpw=false;R()}};
+ admv(v){admv=v;R()},agg(){agg=true;payv=false;cpw=false;drvp=false;R()},
+ drvp(){drvp=true;payv=false;cpw=false;agg=false;R()},
+ dsec(v){dsec=v;R()},dback(){dsec=null;R()},
+ async dsend(id){const l=dget(),e=l.find(x=>x.id===id);if(!e)return;const r={...e};delete r.id;delete r.cl;
+  try{await addDoc(collection(db,'users',DD.owner,'recs'),{...r,ts:Date.now(),addedBy:'driver',drvName:DD.name,drvKey:DK})}catch(x){return msg(x.code==='permission-denied'?'تعذر الإرسال — قد يكون اشتراك الشركة منتهيًا أو الرابط موقوفًا':fb(x))}
+  try{await addDoc(collection(db,'drivers',DK,'hist'),{...r,cl:e.cl,sentTs:Date.now()})}catch(x){}
+  dput(dget().filter(x=>x.id!==id));R()},
+ ddel(id){if(!confirm('تأكيد الحذف'))return;dput(dget().filter(x=>x.id!==id));R()},
+ dl(id){const x=(D.drvs||[]).find(y=>y.id===id);if(x){lastLink={name:x.name,key:id,msg:lmsg(x.name,id)};R()}},
+ async dtog(id){const x=(D.drvs||[]).find(y=>y.id===id);if(!x)return;try{await updateDoc(doc(db,'drivers',id),{active:!x.active})}catch(e){msg(fb(e))}},
+ async ddrop(id){if(!confirm('تأكيد الحذف'))return;try{await deleteDoc(doc(db,'drivers',id))}catch(e){msg(fb(e))}},
+ async copymsg(){const t=lastLink&&lastLink.msg;if(!t)return;try{await navigator.clipboard.writeText(t)}catch(e){const el=$('#lmsg');if(el){el.select();document.execCommand('copy')}}ok('تم نسخ الرسالة')},
+ async addcars(u){const cu=D.users.find(x=>x.id===u);if(!cu||cu.type!=='co')return;const n=parseInt(prompt('عدد السيارات المراد إضافتها'),10);if(!n||n<1)return;if(!confirm('تأكيد إضافة '+n+' سيارة'))return;try{await updateDoc(doc(db,'users',u),{extra:(+cu.extra||0)+n})}catch(e){msg(fb(e))}}};
 document.addEventListener('click',e=>{const a=e.target.closest('[data-a]');if(!a)return;const[n,...v]=a.dataset.a.split(':');ACT[n]&&ACT[n](...v)});
 const AE={'auth/invalid-credential':'الإيميل أو كلمة السر غير صحيحة','auth/email-already-in-use':'هذا الإيميل مسجل من قبل','auth/weak-password':'كلمة السر ضعيفة (٦ أحرف على الأقل)','auth/invalid-email':'الإيميل غير صحيح','auth/too-many-requests':'محاولات كثيرة، حاول بعد قليل','permission-denied':'غير مسموح — قد يكون الاشتراك منتهيًا'};
 const fb=e=>AE[e.code]||AE[(e.code||'').replace('firestore/','')]||('خطأ: '+(e.code||e.message));
 const NA='الحساب غير نشط — لا يمكن الإضافة أو التعديل';
 const FS={
 async login(f){try{await signInWithEmailAndPassword(auth,f.get('e').trim(),f.get('p'))}catch(e){msg(fb(e))}},
-async su(f){try{const c=await createUserWithEmailAndPassword(auth,f.get('e').trim(),f.get('p'));await setDoc(doc(db,'users',c.user.uid),{fn:f.get('fn'),ln:f.get('ln'),mob:f.get('m'),type:f.get('t'),email:c.user.email,plan:'trial',created:serverTimestamp()})}catch(e){msg(fb(e))}},
+async su(f){try{const c=await createUserWithEmailAndPassword(auth,f.get('e').trim(),f.get('p'));await setDoc(doc(db,'users',c.user.uid),{fn:f.get('fn'),ln:f.get('ln'),mob:f.get('m'),type:f.get('t'),...(f.get('t')==='co'?{company:(f.get('cn')||'').trim()}:{}),email:c.user.email,plan:'trial',created:serverTimestamp()})}catch(e){msg(fb(e))}},
 async car(f){if(RO())return msg(NA);if(mine().length>=lim())return;const b=f.get('b')==='أخرى'?(f.get('o')||'').trim()||'أخرى':f.get('b');try{await addDoc(collection(db,'users',me.id,'cars'),{b,m:f.get('m'),c:f.get('c')})}catch(e){msg(fb(e))}},
 async drv(f){if(RO())return msg(NA);try{await addDoc(collection(db,'users',me.id,'drivers'),{n:f.get('n').trim()})}catch(e){msg(fb(e))}},
 async add(f){if(RO())return msg(NA);const r={};for(const[k,v]of f.entries()){if(v instanceof File){if(v.size)r[k]=await shrink(v,700)}else if(v!=='')r[k]=v}
  if(editId){const id=editId;editId=null;try{await updateDoc(doc(db,'users',me.id,'recs',id),r)}catch(e){msg(fb(e))}return R()}
  if(sec==='its'){const pcs=r.pcs,pcm=r.pcm;delete r.pcs;delete r.pcm;const pr=+r.price||0,pc=pcs==='يدوي'?(+pcm||0):(+pcs||0),km=(+r.kmE||0)-(+r.kmS||0);if(km<=0)return msg('كيلو متر الوصول يجب أن يكون أكبر من كيلو متر البداية');r.pct=pc;r.due=n2(pr-pr*pc/100);r.kmT=n2(km);r.cpk=n2(r.due/km)}
  let tc=car;if(sec==='route'||sec==='its'){tc=r.car||car;delete r.car}if(sec==='parts'){if(r.repl){r.replaces=r.repl;delete r.repl}replId=null;r.total=(+r.price||0)+(+r.labor||0);if(r.km&&r.valid)r.next=(+r.km)+(+r.valid);if(r.months&&r.date){const d=new Date(r.date+'T00:00:00'),p=n=>String(n).padStart(2,'0');d.setMonth(d.getMonth()+(+r.months));r.dueDate=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}}
- try{await addDoc(collection(db,'users',me.id,'recs'),{...r,car:tc,sec,ts:Date.now()});if(sec==='its')ok('تمت إضافة الرحلة')}catch(e){msg(fb(e))}}};
+ try{await addDoc(collection(db,'users',me.id,'recs'),{...r,car:tc,sec,ts:Date.now(),...(SVS.includes(sec)?{addedBy:'manager'}:{})});if(sec==='its')ok('تمت إضافة الرحلة')}catch(e){msg(fb(e))}}};
 FS.forgot=async f=>{try{await sendPasswordResetEmail(auth,f.get('e').trim());ok('إذا كان الإيميل مسجلًا لدينا فقد أرسلنا رابط الاسترجاع. راجع صندوق الوارد ورسائل Spam')}catch(e){msg(fb(e))}};
 FS.chpw=async f=>{const n=f.get('n');if(n!==f.get('n2'))return msg('كلمتا السر الجديدتان غير متطابقتين');try{const u=auth.currentUser;await reauthenticateWithCredential(u,EmailAuthProvider.credential(u.email,f.get('o')));await updatePassword(u,n);ok('تم تغيير كلمة السر بنجاح')}catch(e){msg(e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'?'كلمة السر الحالية غير صحيحة':fb(e))}};
 FS.its=FS.add;
+FS.company=async f=>{try{await updateDoc(doc(db,'users',me.id),{company:f.get('cn').trim()})}catch(e){msg(fb(e))}};
+FS.drvlink=async f=>{if(RO())return msg(NA);const name=f.get('dn').trim(),ids=f.getAll('cs');if(!name)return;if(!ids.length)return msg('اختر سيارة واحدة على الأقل');
+ const cars=mine().filter(c=>ids.includes(c.id)).map(c=>({id:c.id,label:lbl(c)})),ex=(D.drvs||[]).find(x=>x.name.trim().toLowerCase()===name.toLowerCase());let key;
+ try{if(ex){key=ex.id;await updateDoc(doc(db,'drivers',key),{carIds:ids,cars,active:true,company:me.company||''})}else{key=mkKey();await setDoc(doc(db,'drivers',key),{name,company:me.company||'',owner:me.id,carIds:ids,cars,active:true,created:serverTimestamp()})}
+  lastLink={name,key,msg:lmsg(name,key)};R()}catch(e){msg(fb(e))}};
+FS.dsave=async f=>{const r={};for(const[k,v]of f.entries())if(v!=='')r[k]=v;const c=(DD.cars||[]).find(x=>x.id===r.car);if(!c)return msg('اختر السيارة');r.cl=c.label;r.sec=dsec;
+ if(dsec==='parts'){r.total=(+r.price||0)+(+r.labor||0);if(r.km&&r.valid)r.next=(+r.km)+(+r.valid);if(r.months&&r.date)r.dueDate=dueOf(r.date,r.months)}
+ r.id=mkKey().slice(0,12);const l=dget();l.unshift(r);dput(l);dsec=null;R()};
 FS.adm=FS.login;
 document.addEventListener('submit',e=>{e.preventDefault();const f=FS[e.target.dataset.f];f&&f(new FormData(e.target))});
 document.addEventListener('change',async e=>{const t=e.target;
+ if(t.name==='t'&&t.closest&&t.closest('form[data-f="su"]')){const l=$('#cnl');l.hidden=t.value!=='co';l.querySelector('input').required=t.value==='co';return}
+ if(t.dataset.xc!==undefined){ACT.xc();return}
+ if(t.dataset.allc!==undefined){document.querySelectorAll('input[name=cs]').forEach(i=>i.checked=t.checked);return}
  if(t.dataset.vc!==undefined){const k=t.dataset.vc==='k',box=$(k?'#vkb':'#vmb');box.hidden=!t.checked;box.querySelectorAll('input').forEach(i=>{i.required=t.checked;if(!t.checked)i.value=''});if(k&&t.checked){const km=box.querySelector('[name=km]');if(km&&!km.value)km.value=t.dataset.ck||''}return}
  if(t.name==='repl'){const o=t.selectedOptions[0],ti=document.querySelector('[name=type]');if(o&&o.dataset.t&&ti)ti.value=o.dataset.t;return}
  if(t.dataset.itf!==undefined){IF[t.dataset.itf]=t.value;return ITSR()}
@@ -295,18 +352,19 @@ document.addEventListener('change',async e=>{const t=e.target;
  if(t.dataset.rf!==undefined){if(t.dataset.rf==='by')RF.val='';RF[t.dataset.rf]=t.value;return R()}
  if(t.dataset.oc!==undefined){const o=document.querySelector('[name=out]');if(o)o.value=(rec(t.value,'route')[0]||{}).inn||'';return}
  if(t.dataset.lg!==undefined&&t.files&&t.files[0]){if(RO())return msg(NA);if(!confirm('تأكيد التعديل')){t.value='';return}const u=await shrink(t.files[0],160,'image/png');try{await updateDoc(doc(db,'users',me.id,'cars',car),{logo:u})}catch(x){msg(fb(x))}}});
-document.addEventListener('input',e=>{if(e.target.closest&&e.target.closest('form[data-f="its"]'))itsCalc()});
+document.addEventListener('input',e=>{if(e.target.closest&&e.target.closest('form[data-f="its"]'))itsCalc();if(e.target.dataset&&e.target.dataset.xn!==undefined){xn=e.target.value;XC()}});
 addEventListener('hashchange',R);
 const ms=t=>t&&t.toMillis?t.toMillis():(t||0);
 const uf=(id,d)=>({id,...d,created:ms(d.created),until:ms(d.until)});
 let unsub=[];
 if(!cfgOk){$('#app').innerHTML='<div class="card">افتح ملف index.html وضع إعدادات Firebase في firebaseConfig (راجع ملف README).</div>'}
 else onAuthStateChanged(auth,u=>{
- unsub.forEach(f=>f());unsub=[];D.cars=[];D.recs={};D.drv={};D.users=[];me=car=sec=null;payv=false;cpw=false;agg=false;editId=null;R();
+ unsub.forEach(f=>f());unsub=[];D.cars=[];D.recs={};D.drv={};D.drvs=[];D.users=[];me=car=sec=null;payv=false;cpw=false;agg=false;drvp=false;xcars=false;editId=null;R();
  if(!u)return;
  const er=e=>msg(fb(e));
  unsub.push(onSnapshot(doc(db,'users',u.uid),s=>{me=s.exists()?uf(u.uid,s.data()):null;R()},er));
  if(u.uid===ADMIN_UID)unsub.push(onSnapshot(collection(db,'users'),s=>{D.users=s.docs.map(d=>uf(d.id,d.data()));R()},er));
+ unsub.push(onSnapshot(query(collection(db,'drivers'),where('owner','==',u.uid)),s=>{D.drvs=s.docs.map(d=>({id:d.id,...d.data()}));R()},er));
  unsub.push(onSnapshot(collection(db,'users',u.uid,'cars'),s=>{D.cars=s.docs.map(d=>({id:d.id,uid:u.uid,...d.data()}));R()},er));
  unsub.push(onSnapshot(collection(db,'users',u.uid,'drivers'),s=>{D.drv[u.uid]=s.docs.map(d=>d.data().n);R()},er));
  unsub.push(onSnapshot(query(collection(db,'users',u.uid,'recs'),orderBy('ts','desc')),s=>{D.recs={};s.docs.forEach(d=>{const x=d.data();((D.recs[x.car]=D.recs[x.car]||{})[x.sec]=(D.recs[x.car][x.sec]||[])).push({id:d.id,...x})});R()},er));
